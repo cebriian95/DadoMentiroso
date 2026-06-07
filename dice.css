@@ -1,0 +1,86 @@
+/* ============================================ */
+/* DICE FACES STYLES                            */
+/* ============================================ */
+.dice{
+  position:relative;
+  width:clamp(58px,20vw,88px);
+  aspect-ratio:1;
+  background:#f8f9fa;
+  border-radius:14px;
+  padding:clamp(6px,1.5vw,10px);
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  grid-template-rows:repeat(3,1fr);
+  box-shadow:0 4px 16px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.6);
+  transition:transform .2s,box-shadow .2s;
+  flex-shrink:0
+}
+
+.dice .pip{
+  display:block;
+  border-radius:50%;
+  width:clamp(10px,3.5vw,16px);
+  aspect-ratio:1;
+  justify-self:center;
+  align-self:center;
+}
+
+.dice .pip.fill{background:#1a1a2e;box-shadow:inset 0 2px 3px rgba(0,0,0,.3)}
+
+.dice.face-1 .pip:nth-child(5){background:#1a1a2e;box-shadow:inset 0 2px 3px rgba(0,0,0,.3)}
+.dice.face-2 .pip:nth-child(1),
+.dice.face-2 .pip:nth-child(9){background:#1a1a2e;box-shadow:inset 0 2px 3px rgba(0,0,0,.3)}
+.dice.face-3 .pip:nth-child(1),
+.dice.face-3 .pip:nth-child(5),
+.dice.face-3 .pip:nth-child(9){background:#1a1a2e;box-shadow:inset 0 2px 3px rgba(0,0,0,.3)}
+.dice.face-4 .pip:nth-child(1),
+.dice.face-4 .pip:nth-child(3),
+.dice.face-4 .pip:nth-child(7),
+.dice.face-4 .pip:nth-child(9){background:#1a1a2e;box-shadow:inset 0 2px 3px rgba(0,0,0,.3)}
+.dice.face-5 .pip:nth-child(1),
+.dice.face-5 .pip:nth-child(3),
+.dice.face-5 .pip:nth-child(5),
+.dice.face-5 .pip:nth-child(7),
+.dice.face-5 .pip:nth-child(9){background:#1a1a2e;box-shadow:inset 0 2px 3px rgba(0,0,0,.3)}
+.dice.face-6 .pip:nth-child(1),
+.dice.face-6 .pip:nth-child(3),
+.dice.face-6 .pip:nth-child(4),
+.dice.face-6 .pip:nth-child(6),
+.dice.face-6 .pip:nth-child(7),
+.dice.face-6 .pip:nth-child(9){background:#1a1a2e;box-shadow:inset 0 2px 3px rgba(0,0,0,.3)}
+
+/* Hidden dice */
+.dice.hidden{
+  background:linear-gradient(145deg,#2d3748,#1a202c);
+  box-shadow:0 4px 16px rgba(0,0,0,.5),inset 0 0 0 1px rgba(255,255,255,.06)
+}
+.dice.hidden::after{
+  content:"?";
+  position:absolute;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:clamp(1.4rem,5vw,2rem);
+  font-weight:700;
+  color:rgba(255,255,255,.15);
+  letter-spacing:0
+}
+.dice.hidden .pip{display:none!important}
+
+/* Roll animation */
+@keyframes dice-roll{
+  0%{transform:rotate(0deg) translateY(0)}
+  8%{transform:rotate(20deg) translateY(-8px)}
+  16%{transform:rotate(-15deg) translateY(5px)}
+  24%{transform:rotate(25deg) translateY(-12px)}
+  32%{transform:rotate(-20deg) translateY(8px)}
+  40%{transform:rotate(15deg) translateY(-5px)}
+  48%{transform:rotate(-25deg) translateY(10px)}
+  56%{transform:rotate(20deg) translateY(-6px)}
+  64%{transform:rotate(-10deg) translateY(4px)}
+  72%{transform:rotate(15deg) translateY(-3px)}
+  80%{transform:rotate(-5deg) translateY(2px)}
+  100%{transform:rotate(0deg) translateY(0)}
+}
+.dice.rolling{animation:dice-roll .6s ease-in-out;pointer-events:none}

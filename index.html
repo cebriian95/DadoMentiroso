@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Dado Mentiroso</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="dice.css">
+</head>
+<body>
+
+<div id="app">
+
+  <div id="start-screen" class="screen active">
+    <h1>DADO<br>MENTIROSO</h1>
+    <p class="subtitle">Cubilete digital</p>
+    <div class="dice-selector">
+      <button id="decrement-btn" class="btn-circle" aria-label="Reducir dados">−</button>
+      <span class="count" id="dice-count-display">5</span>
+      <button id="increment-btn" class="btn-circle" aria-label="Aumentar dados">+</button>
+    </div>
+    <button id="enter-btn" class="btn-primary">Entrar</button>
+  </div>
+
+  <div id="game-screen" class="screen">
+    <div id="top-bar">
+      <button id="remove-die-btn" class="btn-small danger primary-action">-1 Dado</button>
+      <button id="settings-btn" class="btn-small">Ajustes</button>
+      <button id="instructions-btn" class="btn-small">Instrucciones</button>
+      <button id="reset-btn" class="btn-small">Reset</button>
+    </div>
+    <div id="dice-area">
+      <div id="dice-count-label">Dados: <span id="dice-count-game">5</span></div>
+      <div id="dice-container"></div>
+      <div id="gameover-message">
+        <h2 class="gameover-title">HAS<br>PERDIDO</h2>
+      </div>
+    </div>
+    <div id="bottom-area">
+      <button id="roll-btn" class="btn-primary">TIRAR</button>
+      <button id="gameover-reset-btn" class="btn-primary danger" style="display:none">Reset</button>
+      <button id="motion-permission-btn" class="btn-secondary">Permitir movimiento</button>
+    </div>
+  </div>
+
+  <div id="instructions-modal" class="modal-overlay">
+    <div class="modal">
+      <h2>Instrucciones</h2>
+      <p><strong>Dado Mentiroso</strong> (también conocido como Dudo, Perudo o Cacho) es un juego de dados y faroles para 2 o m&aacute;s jugadores.</p>
+      <p><strong>Objetivo:</strong> Ser el &uacute;ltimo jugador con dados.</p>
+      <p><strong>C&oacute;mo se juega:</strong></p>
+      <ul>
+        <li>Cada jugador tiene 5 dados y un cubilete.</li>
+        <li>Todos agitan sus dados y miran su resultado en secreto.</li>
+        <li>Por turnos, se hacen apuestas sobre el total de dados con un cierto valor entre TODOS los jugadores. Ej: "tres 5s".</li>
+        <li>Cada apuesta debe <strong>superar</strong> a la anterior: m&aacute;s dados del mismo valor (3 cinco &rarr; 4 cinco), el mismo n&uacute;mero de dados con un valor mayor (3 cinco &rarr; 3 seis), o m&aacute;s dados de cualquier valor.</li>
+        <li>El siguiente jugador puede <strong>subir la apuesta</strong>, decir <strong>"Dudo"</strong> o decir <strong>"Exacto"</strong>.</li>
+        <li><strong>Dudo:</strong> Se revelan todos los dados. Si la apuesta era correcta (hay al menos esa cantidad), el que dijo "Dudo" pierde un dado. Si era falsa (hay menos), el apostante pierde un dado.</li>
+        <li><strong>Exacto:</strong> Se revelan todos los dados. Si hay exactamente esa cantidad, todos los dem&aacute;s pierden un dado y el que dijo "Exacto" recupera uno si le falta. Si no es exacto, el que dijo "Exacto" pierde un dado.</li>
+      </ul>
+      <p><strong>En esta app:</strong></p>
+      <ul>
+        <li><strong>Tirar:</strong> Agita el m&oacute;vil o pulsa el bot&oacute;n TIRAR.</li>
+        <li><strong>-1 Dado:</strong> Cuando pierdas una ronda.</li>
+        <li><strong>Reset:</strong> Vuelve a empezar.</li>
+      </ul>
+      <button id="close-instructions-btn" class="btn-secondary">Cerrar</button>
+    </div>
+  </div>
+
+  <div id="settings-modal" class="modal-overlay">
+    <div class="modal">
+      <h2>Ajustes</h2>
+      <div class="setting-row">
+        <span>Agitar para tirar</span>
+        <label class="toggle">
+          <input type="checkbox" id="shake-toggle" checked>
+          <span class="slider"></span>
+        </label>
+      </div>
+      <button id="close-settings-btn" class="btn-secondary">Cerrar</button>
+    </div>
+  </div>
+
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
