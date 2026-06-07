@@ -83,7 +83,7 @@
   }
 
   function startGame(){
-    if(state.diceCount < 1 || state.diceCount > 5) return;
+    if(state.diceCount < 1 || state.diceCount > 10) return;
     state.diceValues = new Array(state.diceCount).fill(0);
     state.diceState  = 'hidden';
     switchScreen('game');
@@ -218,7 +218,7 @@
       if(state.diceCount > 1){ state.diceCount--; diceCountDisplay.textContent = state.diceCount; }
     });
     incrementBtn.addEventListener('click', () => {
-      if(state.diceCount < 5){ state.diceCount++; diceCountDisplay.textContent = state.diceCount; }
+      if(state.diceCount < 10){ state.diceCount++; diceCountDisplay.textContent = state.diceCount; }
     });
 
     rollBtn.addEventListener('click', rollDice);

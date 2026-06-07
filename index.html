@@ -1,84 +1,87 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" class="[touch-action:manipulation]">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>Dado Mentiroso</title>
+<script src="https://cdn.tailwindcss.com"></script>
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="dice.css">
 </head>
-<body>
+<body class="flex justify-center items-center min-h-dvh font-[-apple-system,BlinkMacSystemFont,Segoe_UI,Roboto,Helvetica,Arial,sans-serif] bg-[radial-gradient(ellipse_at_center,#0d1b0e_0%,#05080a_100%)] text-slate-200 select-none">
 
-<div id="app">
+<div id="app" class="w-full max-w-[480px] h-dvh relative">
 
-  <div id="start-screen" class="screen active">
-    <h1>DADO<br>MENTIROSO</h1>
-    <p class="subtitle">Cubilete digital</p>
-    <div class="dice-selector">
-      <button id="decrement-btn" class="btn-circle" aria-label="Reducir dados">−</button>
-      <span class="count" id="dice-count-display">5</span>
-      <button id="increment-btn" class="btn-circle" aria-label="Aumentar dados">+</button>
+  <div id="start-screen" class="screen active flex-col items-center justify-center gap-6 w-full h-dvh absolute top-0 left-0 px-3 py-3">
+    <h1 class="text-[clamp(2rem,8vw,3.5rem)] font-black text-center leading-tight tracking-widest text-[#f7e05e]">DADO<br>MENTIROSO</h1>
+    <p class="text-base text-slate-400 tracking-[6px] uppercase -mt-5">Cubilete digital</p>
+    <div class="flex items-center gap-5">
+      <button id="decrement-btn" class="w-14 h-14 rounded-full border-2 border-white/15 bg-white/5 text-slate-200 text-3xl font-bold flex items-center justify-center active:bg-white/10 active:scale-90 transition disabled:opacity-30" aria-label="Reducir dados">−</button>
+      <span id="dice-count-display" class="text-5xl font-bold text-slate-200 min-w-[60px] text-center">5</span>
+      <button id="increment-btn" class="w-14 h-14 rounded-full border-2 border-white/15 bg-white/5 text-slate-200 text-3xl font-bold flex items-center justify-center active:bg-white/10 active:scale-90 transition disabled:opacity-30" aria-label="Aumentar dados">+</button>
     </div>
-    <button id="enter-btn" class="btn-primary">Entrar</button>
+    <button id="enter-btn" class="bg-gradient-to-br from-yellow-300 to-yellow-500 text-[#0d1b0e] rounded-2xl text-[clamp(1.3rem,5vw,1.7rem)] font-extrabold tracking-widest px-[clamp(36px,12vw,60px)] py-[clamp(14px,3vh,22px)] active:scale-95 transition w-fit">Entrar</button>
   </div>
 
-  <div id="game-screen" class="screen">
-    <div id="top-bar">
-      <button id="remove-die-btn" class="btn-small danger primary-action">-1 Dado</button>
-      <button id="settings-btn" class="btn-small">Ajustes</button>
-      <button id="instructions-btn" class="btn-small">Instrucciones</button>
-      <button id="reset-btn" class="btn-small">Reset</button>
+  <div id="game-screen" class="screen flex-col w-full h-dvh absolute top-0 left-0 p-0">
+    <div id="top-bar" class="flex-none flex flex-wrap justify-center gap-2 w-full px-2 pt-2.5 pb-1">
+      <button id="remove-die-btn" class="text-[clamp(.85rem,3.5vw,1rem)] font-bold px-[18px] py-2.5 bg-red-400/15 border border-red-400/35 text-red-400 rounded-xl whitespace-nowrap active:bg-white/20 transition">-1 Dado</button>
+      <button id="settings-btn" class="text-[clamp(.85rem,3.5vw,.95rem)] font-semibold px-3.5 py-2.5 bg-white/10 border border-white/18 text-slate-100 rounded-xl whitespace-nowrap active:bg-white/20 transition">Ajustes</button>
+      <button id="instructions-btn" class="text-[clamp(.85rem,3.5vw,.95rem)] font-semibold px-3.5 py-2.5 bg-white/10 border border-white/18 text-slate-100 rounded-xl whitespace-nowrap active:bg-white/20 transition">Instrucciones</button>
+      <button id="reset-btn" class="text-[clamp(.85rem,3.5vw,.95rem)] font-semibold px-3.5 py-2.5 bg-white/10 border border-white/18 text-slate-100 rounded-xl whitespace-nowrap active:bg-white/20 transition">Reset</button>
     </div>
-    <div id="dice-area">
-      <div id="dice-count-label">Dados: <span id="dice-count-game">5</span></div>
-      <div id="dice-container"></div>
+    <div id="dice-area" class="flex-1 min-h-0 flex flex-col items-center justify-center gap-1.5 w-full">
+      <div id="dice-count-label" class="text-xs text-slate-400 tracking-[1px] leading-none">Dados: <span id="dice-count-game" class="text-[#f7e05e] font-bold text-sm">5</span></div>
+      <div id="dice-container" class="flex gap-[clamp(6px,2vw,12px)] justify-center flex-wrap max-w-[320px] p-0.5"></div>
       <div id="gameover-message">
-        <h2 class="gameover-title">HAS<br>PERDIDO</h2>
+        <h2 class="text-[clamp(2rem,8vw,3.5rem)] font-black text-center leading-tight tracking-widest text-[#f7e05e]">HAS<br>PERDIDO</h2>
       </div>
     </div>
-    <div id="bottom-area">
-      <button id="roll-btn" class="btn-primary">TIRAR</button>
-      <button id="gameover-reset-btn" class="btn-primary danger" style="display:none">Reset</button>
-      <button id="motion-permission-btn" class="btn-secondary">Permitir movimiento</button>
+    <div id="bottom-area" class="flex-none flex flex-col items-center gap-2 w-full px-2 pt-1 pb-[clamp(8px,2vh,16px)]">
+      <button id="roll-btn" class="bg-gradient-to-br from-yellow-300 to-yellow-500 text-[#0d1b0e] rounded-2xl text-[clamp(1.3rem,5vw,1.7rem)] font-extrabold tracking-widest px-[clamp(36px,12vw,60px)] py-[clamp(14px,3vh,22px)] active:scale-95 transition w-fit disabled:opacity-40">TIRAR</button>
+      <button id="gameover-reset-btn" class="bg-gradient-to-br from-red-500 to-red-600 text-white rounded-2xl text-[clamp(1.3rem,5vw,1.7rem)] font-extrabold tracking-widest px-[clamp(36px,12vw,60px)] py-[clamp(14px,3vh,22px)] active:scale-95 transition w-fit" style="display:none">Reset</button>
+      <button id="motion-permission-btn" class="bg-white/8 text-slate-300 border border-white/12 rounded-xl text-[.85rem] font-semibold px-4 py-2 active:bg-white/15 transition">Permitir movimiento</button>
     </div>
   </div>
 
-  <div id="instructions-modal" class="modal-overlay">
-    <div class="modal">
-      <h2>Instrucciones</h2>
-      <p><strong>Dado Mentiroso</strong> (también conocido como Dudo, Perudo o Cacho) es un juego de dados y faroles para 2 o m&aacute;s jugadores.</p>
-      <p><strong>Objetivo:</strong> Ser el &uacute;ltimo jugador con dados.</p>
-      <p><strong>C&oacute;mo se juega:</strong></p>
-      <ul>
-        <li>Cada jugador tiene 5 dados y un cubilete.</li>
-        <li>Todos agitan sus dados y miran su resultado en secreto.</li>
-        <li>Por turnos, se hacen apuestas sobre el total de dados con un cierto valor entre TODOS los jugadores. Ej: "tres 5s".</li>
-        <li>Cada apuesta debe <strong>superar</strong> a la anterior: m&aacute;s dados del mismo valor (3 cinco &rarr; 4 cinco), el mismo n&uacute;mero de dados con un valor mayor (3 cinco &rarr; 3 seis), o m&aacute;s dados de cualquier valor.</li>
-        <li>El siguiente jugador puede <strong>subir la apuesta</strong>, decir <strong>"Dudo"</strong> o decir <strong>"Exacto"</strong>.</li>
-        <li><strong>Dudo:</strong> Se revelan todos los dados. Si la apuesta era correcta (hay al menos esa cantidad), el que dijo "Dudo" pierde un dado. Si era falsa (hay menos), el apostante pierde un dado.</li>
-        <li><strong>Exacto:</strong> Se revelan todos los dados. Si hay exactamente esa cantidad, todos los dem&aacute;s pierden un dado y el que dijo "Exacto" recupera uno si le falta. Si no es exacto, el que dijo "Exacto" pierde un dado.</li>
+  <div id="instructions-modal" class="modal-overlay fixed inset-0 bg-black/85 backdrop-blur z-[1000] p-5 items-center justify-center">
+    <div class="modal bg-gradient-to-br from-[#1a1f2e] to-[#0f1420] border border-white/6 rounded-2xl p-[clamp(20px,4vw,32px)] w-full max-w-[420px] max-h-[80vh] overflow-y-auto">
+      <div class="sticky top-0 z-10 flex items-start justify-between pb-3 mb-3 bg-gradient-to-br from-[#1a1f2e] to-[#0f1420]">
+        <h2 class="text-xl font-bold text-slate-100">Instrucciones</h2>
+        <button id="close-instructions-btn" class="w-8 h-8 flex items-center justify-center rounded-full bg-white/10 text-slate-300 hover:bg-white/20 active:bg-white/20 transition flex-shrink-0 text-lg leading-none -mr-1 -mt-1">✕</button>
+      </div>
+      <p class="text-slate-400 leading-relaxed text-sm mb-2"><strong>Dado Mentiroso</strong> (también conocido como Dudo, Perudo o Cacho) es un juego de dados y faroles para 2 o más jugadores.</p>
+      <p class="text-slate-400 leading-relaxed text-sm mb-2"><strong>Objetivo:</strong> Ser el último jugador con dados.</p>
+      <p class="text-slate-400 leading-relaxed text-sm mb-2"><strong>Cómo se juega:</strong></p>
+      <ul class="list-none p-0">
+        <li class="text-slate-400 leading-relaxed text-sm mb-2">Cada jugador tiene 5 dados y un cubilete.</li>
+        <li class="text-slate-400 leading-relaxed text-sm mb-2">Todos agitan sus dados y miran su resultado en secreto.</li>
+        <li class="text-slate-400 leading-relaxed text-sm mb-2">Por turnos, se hacen apuestas sobre el total de dados con un cierto valor entre TODOS los jugadores. Ej: "tres 5s".</li>
+        <li class="text-slate-400 leading-relaxed text-sm mb-2">Cada apuesta debe <strong>superar</strong> a la anterior: más dados del mismo valor (3 cinco → 4 cinco), el mismo número de dados con un valor mayor (3 cinco → 3 seis), o más dados de cualquier valor.</li>
+        <li class="text-slate-400 leading-relaxed text-sm mb-2">El siguiente jugador puede <strong>subir la apuesta</strong>, decir <strong>"Dudo"</strong> o decir <strong>"Exacto"</strong>.</li>
+        <li class="text-slate-400 leading-relaxed text-sm mb-2"><strong>Dudo:</strong> Se revelan todos los dados. Si la apuesta era correcta (hay al menos esa cantidad), el que dijo "Dudo" pierde un dado. Si era falsa (hay menos), el apostante pierde un dado.</li>
+        <li class="text-slate-400 leading-relaxed text-sm mb-2"><strong>Exacto:</strong> Se revelan todos los dados. Si hay exactamente esa cantidad, todos los demás pierden un dado y el que dijo "Exacto" recupera uno si le falta. Si no es exacto, el que dijo "Exacto" pierde un dado.</li>
       </ul>
-      <p><strong>En esta app:</strong></p>
-      <ul>
-        <li><strong>Tirar:</strong> Agita el m&oacute;vil o pulsa el bot&oacute;n TIRAR.</li>
-        <li><strong>-1 Dado:</strong> Cuando pierdas una ronda.</li>
-        <li><strong>Reset:</strong> Vuelve a empezar.</li>
+      <p class="text-slate-400 leading-relaxed text-sm mb-2"><strong>En esta app:</strong></p>
+      <ul class="list-none p-0">
+        <li class="text-slate-400 leading-relaxed text-sm mb-2"><strong>Tirar:</strong> Agita el móvil o pulsa el botón TIRAR.</li>
+        <li class="text-slate-400 leading-relaxed text-sm mb-2"><strong>-1 Dado:</strong> Cuando pierdas una ronda.</li>
+        <li class="text-slate-400 leading-relaxed text-sm mb-2"><strong>Reset:</strong> Vuelve a empezar.</li>
       </ul>
-      <button id="close-instructions-btn" class="btn-secondary">Cerrar</button>
     </div>
   </div>
 
-  <div id="settings-modal" class="modal-overlay">
-    <div class="modal">
-      <h2>Ajustes</h2>
-      <div class="setting-row">
-        <span>Agitar para tirar</span>
+  <div id="settings-modal" class="modal-overlay fixed inset-0 bg-black/85 backdrop-blur z-[1000] p-5 items-center justify-center">
+    <div class="modal bg-gradient-to-br from-[#1a1f2e] to-[#0f1420] border border-white/6 rounded-2xl p-[clamp(20px,4vw,32px)] w-full max-w-[420px] max-h-[80vh] overflow-y-auto">
+      <h2 class="text-xl font-bold mb-4 text-slate-100">Ajustes</h2>
+      <div class="flex items-center justify-between py-3 border-b border-white/5">
+        <span class="text-sm text-slate-300">Agitar para tirar</span>
         <label class="toggle">
           <input type="checkbox" id="shake-toggle" checked>
           <span class="slider"></span>
         </label>
       </div>
-      <button id="close-settings-btn" class="btn-secondary">Cerrar</button>
+      <button id="close-settings-btn" class="bg-white/8 text-slate-300 border border-white/12 rounded-xl text-sm font-semibold px-5 py-2.5 active:bg-white/15 transition w-full mt-5">Cerrar</button>
     </div>
   </div>
 
