@@ -6,7 +6,7 @@
     diceCount: 5,
     diceValues: [],
     diceState: 'hidden',
-    settings: { shakeEnabled: true },
+    settings: { shakeEnabled: true, alwaysSort: false },
     sensorsActive: false,
     motionPermissionGranted: false
   };
@@ -26,6 +26,7 @@
   const settingsModal = $('settings-modal');
   const instructionsModal = $('instructions-modal');
   const shakeToggle   = $('shake-toggle');
+  const alwaysSortToggle = $('always-sort-toggle');
   const diceCountDisplay = $('dice-count-display');
   const diceCountGame = $('dice-count-game');
   const decrementBtn  = $('decrement-btn');
@@ -33,6 +34,7 @@
   const motionPermissionBtn = $('motion-permission-btn');
   const gameoverMessage = $('gameover-message');
   const gameoverResetBtn = $('gameover-reset-btn');
+  const sortBtn = $('sort-btn');
 
   function loadSettings(){
     try {
@@ -40,9 +42,12 @@
       if(saved){
         const p = JSON.parse(saved);
         state.settings.shakeEnabled = p.shakeEnabled !== undefined ? p.shakeEnabled : true;
+      state.settings.alwaysSort = p.alwaysSort !== undefined ? p.alwaysSort : false;
       }
     } catch(e){}
     shakeToggle.checked = state.settings.shakeEnabled;
+    alwaysSortToggle.checked = state.settings.alwaysSort;
+    sortBtn.style.display = state.settings.alwaysSort ? 'none' : '';
   }
 
   function saveSettings(){
@@ -86,6 +91,7 @@
     if(state.diceCount < 1 || state.diceCount > 10) return;
     state.diceValues = new Array(state.diceCount).fill(0);
     state.diceState  = 'hidden';
+    sortBtn.style.display = state.settings.alwaysSort ? 'none' : '';
     switchScreen('game');
     renderDice();
     enableSensors();
@@ -101,6 +107,7 @@
       state.diceState  = 'revealed';
       renderDice();
       rollBtn.disabled = false;
+      if(state.settings.alwaysSort) sortDice();
     }, 650);
   }
 
@@ -123,6 +130,13 @@
     rollBtn.style.display = 'none';
     gameoverResetBtn.style.display = 'block';
     removeDieBtn.disabled = true;
+    sortBtn.style.display = 'none';
+  }
+
+  function sortDice(){
+    if(state.diceCount === 0 || state.diceState !== 'revealed') return;
+    state.diceValues.sort((a,b) => a - b);
+    renderDice();
   }
 
   function hideGameOver(){
@@ -226,6 +240,7 @@
     resetBtn.addEventListener('click', resetGame);
     gameoverResetBtn.addEventListener('click', resetGame);
     motionPermissionBtn.addEventListener('click', requestMotionPermission);
+    sortBtn.addEventListener('click', sortDice);
 
     settingsBtn.addEventListener('click', () => openModal(settingsModal));
     instructionsBtn.addEventListener('click', () => openModal(instructionsModal));
@@ -235,6 +250,7 @@
     instructionsModal.addEventListener('click', e => { if(e.target === instructionsModal) closeModal(instructionsModal); });
 
     shakeToggle.addEventListener('change', () => { state.settings.shakeEnabled = shakeToggle.checked; saveSettings(); });
+    alwaysSortToggle.addEventListener('change', () => { state.settings.alwaysSort = alwaysSortToggle.checked; saveSettings(); sortBtn.style.display = state.settings.alwaysSort ? 'none' : ''; });
 
     document.addEventListener('dblclick', e => e.preventDefault());
   }

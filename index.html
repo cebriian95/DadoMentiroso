@@ -33,6 +33,7 @@
     <div id="dice-area" class="flex-1 min-h-0 flex flex-col items-center justify-center gap-1.5 w-full">
       <div id="dice-count-label" class="text-xs text-slate-400 tracking-[1px] leading-none">Dados: <span id="dice-count-game" class="text-[#f7e05e] font-bold text-sm">5</span></div>
       <div id="dice-container" class="flex gap-[clamp(6px,2vw,12px)] justify-center flex-wrap max-w-[320px] p-0.5"></div>
+      <button id="sort-btn" class="text-xs text-slate-400 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 active:bg-white/10 transition">Ordenar ↑</button>
       <div id="gameover-message">
         <h2 class="text-[clamp(2rem,8vw,3.5rem)] font-black text-center leading-tight tracking-widest text-[#f7e05e]">HAS<br>PERDIDO</h2>
       </div>
@@ -78,6 +79,13 @@
         <span class="text-sm text-slate-300">Agitar para tirar</span>
         <label class="toggle">
           <input type="checkbox" id="shake-toggle" checked>
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div class="flex items-center justify-between py-3">
+        <span class="text-sm text-slate-300">Ordenar dados</span>
+        <label class="toggle">
+          <input type="checkbox" id="always-sort-toggle">
           <span class="slider"></span>
         </label>
       </div>
