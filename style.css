@@ -22,9 +22,23 @@ body{-webkit-tap-highlight-color:transparent}
 .toggle input:checked+.slider{background:#22c55e}
 .toggle input:checked+.slider::before{transform:translateX(22px)}
 
-/* Long-press feedback for roll button */
-@keyframes pulse-longpress{0%{box-shadow:0 0 0 0 rgba(247,224,94,.5)}100%{box-shadow:0 0 0 20px rgba(247,224,94,0)}}
-.pressing{animation:pulse-longpress 1s ease-out forwards}
+/* Long-press: dark on press, yellow circle expands from center */
+#roll-btn{position:relative;overflow:hidden;isolation:isolate;background:linear-gradient(135deg,#fde047,#eab308);color:#0d1b0e}
+#roll-btn.pressing{background:#1a1a2e;color:#fff}
+#roll-btn.pressing::before{
+  content:"";
+  position:absolute;inset:0;
+  z-index:1;
+  background:linear-gradient(135deg,#fde047,#eab308);
+  pointer-events:none;
+  clip-path:circle(0% at 50% 50%);
+  animation:reveal-from-center var(--hold-ms,1s) ease-out forwards
+}
+#roll-btn span{position:relative;z-index:2}
+@keyframes reveal-from-center{
+  0%{clip-path:circle(0% at 50% 50%)}
+  100%{clip-path:circle(75% at 50% 50%)}
+}
 
 /* Modal extras */
 .modal ul{list-style:none;padding:0}

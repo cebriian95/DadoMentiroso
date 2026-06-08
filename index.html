@@ -63,7 +63,7 @@
       <div id="bottom-area"
         class="flex-none flex flex-col items-center gap-2 w-full px-2 pt-1 pb-[clamp(8px,2vh,16px)]">
         <button id="roll-btn"
-          class="bg-gradient-to-br from-yellow-300 to-yellow-500 text-[#0d1b0e] rounded-2xl text-[clamp(1.3rem,5vw,1.7rem)] font-extrabold tracking-widest px-[clamp(36px,12vw,60px)] py-[clamp(14px,3vh,22px)] active:scale-95 transition w-fit disabled:opacity-40">TIRAR</button>
+          class="rounded-2xl text-[clamp(1.3rem,5vw,1.7rem)] font-extrabold tracking-widest px-[clamp(36px,12vw,60px)] py-[clamp(14px,3vh,22px)] active:scale-95 transition w-fit disabled:opacity-40"><span>TIRAR</span></button>
         <button id="cover-btn"
           class="bg-white/8 text-slate-300 border border-white/12 rounded-xl text-sm font-semibold px-6 py-2.5 active:bg-white/15 transition">Tapar</button>
         <button id="gameover-reset-btn"
@@ -74,50 +74,53 @@
 
     <div id="instructions-modal"
       class="modal-overlay fixed inset-0 bg-black/85 backdrop-blur z-[1000] p-5 items-center justify-center">
-      <div
-        class="modal bg-gradient-to-br from-[#1a1f2e] to-[#0f1420] border border-white/6 rounded-2xl p-[clamp(20px,4vw,32px)] w-full max-w-[420px] max-h-[80vh] overflow-y-auto">
+      <div class="relative w-full max-w-[420px]">
+        <button id="close-instructions-btn"
+          class="absolute top-[clamp(12px,2vw,20px)] right-[clamp(12px,2vw,20px)] w-9 h-9 flex items-center justify-center rounded-full bg-white/15 text-slate-300 active:bg-white/25 transition text-lg z-10 shadow-lg">✕</button>
         <div
-          class="sticky top-0 z-10 flex items-start justify-between pb-3 mb-3 bg-gradient-to-br from-[#1a1f2e] to-[#0f1420]">
-          <h2 class="text-xl font-bold text-slate-100">Instrucciones</h2>
-          <button id="close-instructions-btn"
-            class="w-8 h-8 flex items-center justify-center rounded-full bg-white/10 text-slate-300 hover:bg-white/20 active:bg-white/20 transition flex-shrink-0 text-lg leading-none -mr-1 -mt-1">✕</button>
+          class="modal bg-gradient-to-br from-[#1a1f2e] to-[#0f1420] border border-white/6 rounded-2xl p-[clamp(20px,4vw,32px)] w-full max-h-[80vh] overflow-y-auto">
+          <h2 class="text-xl font-bold text-slate-100 mb-4">Instrucciones</h2>
+          <p class="text-slate-400 leading-relaxed text-sm mb-2"><strong>Dado Mentiroso</strong> es un juego de dados y
+            faroles para 2 o más jugadores.</p>
+          <p class="text-slate-400 leading-relaxed text-sm mb-2"><strong>Objetivo:</strong> Ser el último jugador con
+            dados.</p>
+          <p class="text-slate-400 leading-relaxed text-sm mb-2"><strong>Cómo se juega:</strong></p>
+          <ul class="list-none p-0">
+            <li class="text-slate-400 leading-relaxed text-sm mb-2">Cada jugador tiene sus dados (normalmente 5) y un
+              cubilete.</li>
+            <li class="text-slate-400 leading-relaxed text-sm mb-2">Todos agitan sus dados y miran su resultado en
+              secreto.</li>
+            <li class="text-slate-400 leading-relaxed text-sm mb-2">Por turnos, se hacen apuestas sobre el total de
+              dados
+              con un cierto valor entre TODOS los jugadores. Ej: "tres 5s".</li>
+            <li class="text-slate-400 leading-relaxed text-sm mb-2">Cada apuesta debe <strong>superar</strong> a la
+              anterior: más dados del mismo valor (3 cinco → 4 cinco), el mismo número de dados con un valor mayor (3
+              cinco → 3 seis), o más dados de cualquier valor.</li>
+            <li class="text-slate-400 leading-relaxed text-sm mb-2">El siguiente jugador puede <strong>subir la
+                apuesta</strong>, decir <strong>"Mentira"</strong> o decir <strong>"Exacto"</strong>.</li>
+            <li class="text-slate-400 leading-relaxed text-sm mb-2"><strong>Mentira:</strong> Se revelan todos los
+              dados.
+              Si la apuesta era correcta (hay al menos esa cantidad), el que dijo "Mentira" pierde un dado. Si era falsa
+              (hay menos), el apostante pierde un dado.</li>
+            <li class="text-slate-400 leading-relaxed text-sm mb-2"><strong>Exacto:</strong> Se revelan todos los dados.
+              Si hay exactamente esa cantidad, todos los demás pierden un dado. Si no es exacto, el que dijo "Exacto"
+              pierde un dado.</li>
+          </ul>
+          <p class="text-slate-400 leading-relaxed text-sm mb-2"><strong>En esta app:</strong></p>
+          <ul class="list-none p-0">
+            <li class="text-slate-400 leading-relaxed text-sm mb-2"><strong>Tirar:</strong> Mantén 1 segundo el botón
+              TIRAR para
+              lanzar los dados.</li>
+            <li class="text-slate-400 leading-relaxed text-sm mb-2"><strong>Tapar / Destapar:</strong> Oculta o muestra
+              tus dados.</li>
+            <li class="text-slate-400 leading-relaxed text-sm mb-2"><strong>Ordenar:</strong> Ordena los dados de menor
+              a
+              mayor para verlos mejor.</li>
+            <li class="text-slate-400 leading-relaxed text-sm mb-2"><strong>-1 Dado:</strong> Cuando pierdas una ronda.
+            </li>
+            <li class="text-slate-400 leading-relaxed text-sm mb-2"><strong>Reset:</strong> Vuelve a empezar.</li>
+          </ul>
         </div>
-        <p class="text-slate-400 leading-relaxed text-sm mb-2"><strong>Dado Mentiroso</strong> (también conocido como
-          Dudo, Perudo o Cacho) es un juego de dados y faroles para 2 o más jugadores.</p>
-        <p class="text-slate-400 leading-relaxed text-sm mb-2"><strong>Objetivo:</strong> Ser el último jugador con
-          dados.</p>
-        <p class="text-slate-400 leading-relaxed text-sm mb-2"><strong>Cómo se juega:</strong></p>
-        <ul class="list-none p-0">
-          <li class="text-slate-400 leading-relaxed text-sm mb-2">Cada jugador tiene sus dados (normalmente 5) y un
-            cubilete.</li>
-          <li class="text-slate-400 leading-relaxed text-sm mb-2">Todos agitan sus dados y miran su resultado en
-            secreto.</li>
-          <li class="text-slate-400 leading-relaxed text-sm mb-2">Por turnos, se hacen apuestas sobre el total de dados
-            con un cierto valor entre TODOS los jugadores. Ej: "tres 5s".</li>
-          <li class="text-slate-400 leading-relaxed text-sm mb-2">Cada apuesta debe <strong>superar</strong> a la
-            anterior: más dados del mismo valor (3 cinco → 4 cinco), el mismo número de dados con un valor mayor (3
-            cinco → 3 seis), o más dados de cualquier valor.</li>
-          <li class="text-slate-400 leading-relaxed text-sm mb-2">El siguiente jugador puede <strong>subir la
-              apuesta</strong>, decir <strong>"Mentira"</strong> o decir <strong>"Exacto"</strong>.</li>
-          <li class="text-slate-400 leading-relaxed text-sm mb-2"><strong>Mentira:</strong> Se revelan todos los dados.
-            Si la apuesta era correcta (hay al menos esa cantidad), el que dijo "Mentira" pierde un dado. Si era falsa
-            (hay menos), el apostante pierde un dado.</li>
-          <li class="text-slate-400 leading-relaxed text-sm mb-2"><strong>Exacto:</strong> Se revelan todos los dados.
-            Si hay exactamente esa cantidad, todos los demás pierden un dado. Si no es exacto, el que dijo "Exacto"
-            pierde un dado.</li>
-        </ul>
-        <p class="text-slate-400 leading-relaxed text-sm mb-2"><strong>En esta app:</strong></p>
-        <ul class="list-none p-0">
-          <li class="text-slate-400 leading-relaxed text-sm mb-2"><strong>Tirar:</strong> Mantén 1 segundo el botón TIRAR para
-            lanzar los dados.</li>
-          <li class="text-slate-400 leading-relaxed text-sm mb-2"><strong>Tapar / Destapar:</strong> Oculta o muestra
-            tus dados.</li>
-          <li class="text-slate-400 leading-relaxed text-sm mb-2"><strong>Ordenar:</strong> Ordena los dados de menor a
-            mayor para verlos mejor.</li>
-          <li class="text-slate-400 leading-relaxed text-sm mb-2"><strong>-1 Dado:</strong> Cuando pierdas una ronda.
-          </li>
-          <li class="text-slate-400 leading-relaxed text-sm mb-2"><strong>Reset:</strong> Vuelve a empezar.</li>
-        </ul>
       </div>
     </div>
 

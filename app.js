@@ -159,11 +159,14 @@
     switchScreen('start');
   }
 
+  const HOLD_MS = 1000;
   let pressTimer = null;
 
   function startPress(e){
     if(state.diceState === 'rolling' || state.diceCount === 0 || rollBtn.disabled) return;
-    pressTimer = setTimeout(rollDice, 1000);
+    e.preventDefault();
+    rollBtn.style.setProperty('--hold-ms', HOLD_MS + 'ms');
+    pressTimer = setTimeout(rollDice, HOLD_MS);
     rollBtn.classList.add('pressing');
   }
 
@@ -188,7 +191,8 @@
     });
 
     rollBtn.addEventListener('mousedown', startPress);
-    rollBtn.addEventListener('touchstart', startPress, {passive: true});
+    rollBtn.addEventListener('touchstart', startPress, {passive: false});
+    rollBtn.addEventListener('touchmove', endPress, {passive: true});
     rollBtn.addEventListener('mouseup', endPress);
     rollBtn.addEventListener('touchend', endPress);
     rollBtn.addEventListener('mouseleave', endPress);
@@ -197,6 +201,7 @@
     gameoverResetBtn.addEventListener('click', resetGame);
     sortBtn.addEventListener('click', sortDice);
     coverBtn.addEventListener('click', coverDice);
+    coverBtn.addEventListener('touchend', e => { e.preventDefault(); coverDice(); });
 
     settingsBtn.addEventListener('click', () => openModal(settingsModal));
     instructionsBtn.addEventListener('click', () => openModal(instructionsModal));
