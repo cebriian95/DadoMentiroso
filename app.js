@@ -6,9 +6,7 @@
     diceCount: 5,
     diceValues: [],
     diceState: 'hidden',
-    settings: { shakeEnabled: true, alwaysSort: false },
-    sensorsActive: false,
-    motionPermissionGranted: false
+    settings: { alwaysSort: false }
   };
 
   const $ = id => document.getElementById(id);
@@ -25,27 +23,24 @@
   const closeInstructionsBtn = $('close-instructions-btn');
   const settingsModal = $('settings-modal');
   const instructionsModal = $('instructions-modal');
-  const shakeToggle   = $('shake-toggle');
   const alwaysSortToggle = $('always-sort-toggle');
   const diceCountDisplay = $('dice-count-display');
   const diceCountGame = $('dice-count-game');
   const decrementBtn  = $('decrement-btn');
   const incrementBtn  = $('increment-btn');
-  const motionPermissionBtn = $('motion-permission-btn');
   const gameoverMessage = $('gameover-message');
   const gameoverResetBtn = $('gameover-reset-btn');
   const sortBtn = $('sort-btn');
+  const coverBtn = $('cover-btn');
 
   function loadSettings(){
     try {
       const saved = localStorage.getItem('dadoMentirosoSettings');
       if(saved){
         const p = JSON.parse(saved);
-        state.settings.shakeEnabled = p.shakeEnabled !== undefined ? p.shakeEnabled : true;
       state.settings.alwaysSort = p.alwaysSort !== undefined ? p.alwaysSort : false;
       }
     } catch(e){}
-    shakeToggle.checked = state.settings.shakeEnabled;
     alwaysSortToggle.checked = state.settings.alwaysSort;
     sortBtn.style.display = state.settings.alwaysSort ? 'none' : '';
   }
@@ -92,9 +87,10 @@
     state.diceValues = new Array(state.diceCount).fill(0);
     state.diceState  = 'hidden';
     sortBtn.style.display = state.settings.alwaysSort ? 'none' : '';
+    coverBtn.style.display = '';
+    coverBtn.textContent = 'Tapar';
     switchScreen('game');
     renderDice();
-    enableSensors();
   }
 
   function rollDice(){
@@ -131,11 +127,19 @@
     gameoverResetBtn.style.display = 'block';
     removeDieBtn.disabled = true;
     sortBtn.style.display = 'none';
+    coverBtn.style.display = 'none';
   }
 
   function sortDice(){
     if(state.diceCount === 0 || state.diceState !== 'revealed') return;
     state.diceValues.sort((a,b) => a - b);
+    renderDice();
+  }
+
+  function coverDice(){
+    if(state.diceCount === 0 || (state.diceState !== 'revealed' && state.diceState !== 'hidden')) return;
+    state.diceState = state.diceState === 'revealed' ? 'hidden' : 'revealed';
+    coverBtn.textContent = state.diceState === 'hidden' ? 'Destapar' : 'Tapar';
     renderDice();
   }
 
@@ -147,7 +151,6 @@
   }
 
   function resetGame(){
-    disableSensors();
     hideGameOver();
     state.diceCount = 5;
     state.diceValues = [];
@@ -156,68 +159,17 @@
     switchScreen('start');
   }
 
-  /* Sensors */
-  let lastAccel = null;
+  let pressTimer = null;
 
-  function handleMotion(e){
-    if(!state.settings.shakeEnabled || state.diceState === 'rolling' || state.screen !== 'game') return;
-
-    let acc = e.acceleration;
-    if(!acc || (acc.x === null && acc.y === null && acc.z === null)){
-      acc = e.accelerationIncludingGravity;
-    }
-    if(!acc) return;
-
-    const ax = acc.x || 0;
-    const ay = acc.y || 0;
-    const az = acc.z || 0;
-
-    if(!lastAccel){ lastAccel = { x:ax, y:ay, z:az }; return; }
-
-    const delta = Math.abs(ax - lastAccel.x) + Math.abs(ay - lastAccel.y) + Math.abs(az - lastAccel.z);
-    lastAccel = { x:ax, y:ay, z:az };
-
-    const threshold = e.acceleration && e.acceleration.x !== null ? 10 : 16;
-    if(delta > threshold) rollDice();
+  function startPress(e){
+    if(state.diceState === 'rolling' || state.diceCount === 0 || rollBtn.disabled) return;
+    pressTimer = setTimeout(rollDice, 1000);
+    rollBtn.classList.add('pressing');
   }
 
-  function enableSensors(){
-    if(state.sensorsActive) return;
-    if(typeof window.DeviceMotionEvent === 'undefined') return;
-    const needsPermission = typeof DeviceMotionEvent !== 'undefined' &&
-      typeof DeviceMotionEvent.requestPermission === 'function';
-    if(needsPermission){
-      if(state.motionPermissionGranted){ addSensorListeners(); }
-      else { motionPermissionBtn.style.display = 'block'; }
-      return;
-    }
-    addSensorListeners();
-  }
-
-  function addSensorListeners(){
-    window.addEventListener('devicemotion', handleMotion);
-    state.sensorsActive = true;
-  }
-
-  function disableSensors(){
-    window.removeEventListener('devicemotion', handleMotion);
-    state.sensorsActive = false;
-    motionPermissionBtn.style.display = 'none';
-  }
-
-  async function requestMotionPermission(){
-    if(typeof DeviceMotionEvent !== 'undefined' &&
-       typeof DeviceMotionEvent.requestPermission === 'function'){
-      try {
-        if(await DeviceMotionEvent.requestPermission() === 'granted'){
-          state.motionPermissionGranted = true;
-          addSensorListeners();
-          motionPermissionBtn.style.display = 'none';
-        }
-      } catch(e){
-        motionPermissionBtn.textContent = 'Permiso denegado';
-      }
-    }
+  function endPress(){
+    if(pressTimer){ clearTimeout(pressTimer); pressTimer = null; }
+    rollBtn.classList.remove('pressing');
   }
 
   function openModal(m){ m.classList.add('open'); }
@@ -235,12 +187,16 @@
       if(state.diceCount < 10){ state.diceCount++; diceCountDisplay.textContent = state.diceCount; }
     });
 
-    rollBtn.addEventListener('click', rollDice);
+    rollBtn.addEventListener('mousedown', startPress);
+    rollBtn.addEventListener('touchstart', startPress, {passive: true});
+    rollBtn.addEventListener('mouseup', endPress);
+    rollBtn.addEventListener('touchend', endPress);
+    rollBtn.addEventListener('mouseleave', endPress);
     removeDieBtn.addEventListener('click', removeDie);
     resetBtn.addEventListener('click', resetGame);
     gameoverResetBtn.addEventListener('click', resetGame);
-    motionPermissionBtn.addEventListener('click', requestMotionPermission);
     sortBtn.addEventListener('click', sortDice);
+    coverBtn.addEventListener('click', coverDice);
 
     settingsBtn.addEventListener('click', () => openModal(settingsModal));
     instructionsBtn.addEventListener('click', () => openModal(instructionsModal));
@@ -249,8 +205,7 @@
     settingsModal.addEventListener('click', e => { if(e.target === settingsModal) closeModal(settingsModal); });
     instructionsModal.addEventListener('click', e => { if(e.target === instructionsModal) closeModal(instructionsModal); });
 
-    shakeToggle.addEventListener('change', () => { state.settings.shakeEnabled = shakeToggle.checked; saveSettings(); });
-    alwaysSortToggle.addEventListener('change', () => { state.settings.alwaysSort = alwaysSortToggle.checked; saveSettings(); sortBtn.style.display = state.settings.alwaysSort ? 'none' : ''; });
+    alwaysSortToggle.addEventListener('change', () => { state.settings.alwaysSort = alwaysSortToggle.checked; saveSettings(); sortBtn.style.display = state.settings.alwaysSort ? 'none' : ''; if(state.settings.alwaysSort && state.diceState === 'revealed') sortDice(); });
 
     document.addEventListener('dblclick', e => e.preventDefault());
   }
