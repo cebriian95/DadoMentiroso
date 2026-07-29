@@ -1,0 +1,9 @@
+<router-outlet />
+
+<!-- Toast global de errores -->
+@if (error(); as msg) {
+  <div class="banner-in fixed inset-x-0 top-4 z-[2000] mx-auto w-fit max-w-[90vw] rounded-xl border border-danger/40 bg-danger-a15 px-5 py-3 text-center text-sm font-semibold text-danger-light shadow-lg shadow-[var(--shadow)] backdrop-blur"
+       role="alert" (click)="clearError()">
+    {{ msg }}
+  </div>
+}

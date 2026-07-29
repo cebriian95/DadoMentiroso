@@ -1,0 +1,137 @@
+@if (room(); as room) {
+  <div class="mx-auto flex h-dvh w-full max-w-[480px] flex-col gap-3 px-4 py-4">
+
+    <!-- Cabecera: sala + código -->
+    <div class="flex items-center justify-between gap-3">
+      <div class="min-w-0">
+        <h2 class="truncate text-xl font-black tracking-wide text-accent">{{ room.name }}</h2>
+        <p class="text-xs uppercase tracking-[1px] text-secondary">
+          Sala de preparación {{ room.isPrivate ? '· privada 🔒' : '· pública' }}
+        </p>
+      </div>
+      <button (click)="copyCode()"
+              class="shrink-0 rounded-xl border border-accent/40 bg-accent/10 px-3 py-2 text-center transition active:scale-95">
+        <span class="block text-[10px] uppercase tracking-[1px] text-secondary">{{ copied() ? '¡Copiado!' : 'Código' }}</span>
+        <span class="block text-lg font-black tracking-[4px] text-accent">{{ room.id }}</span>
+      </button>
+    </div>
+
+    <!-- Banner de ganador de la partida anterior -->
+    @if (game.gameOver(); as over) {
+      <div class="banner-in rounded-xl border border-accent/40 bg-accent/10 px-4 py-3 text-center">
+        <span class="text-sm font-bold text-accent">🏆 {{ over.winnerName }} ganó la última partida</span>
+      </div>
+    }
+
+    <!-- Jugadores -->
+    <div class="rounded-2xl border border-border-a10 bg-panel p-3">
+      <div class="mb-2 flex items-center justify-between">
+        <span class="text-xs uppercase tracking-[1px] text-secondary">Jugadores ({{ room.players.length }})</span>
+        @if (isHost()) {
+          <span class="text-[10px] uppercase tracking-[1px] text-muted">Pulsa ✕ para expulsar</span>
+        }
+      </div>
+      <div class="flex flex-col gap-1.5">
+        @for (p of room.players; track p.id) {
+          <div class="flex items-center justify-between gap-2 rounded-xl border px-3 py-2.5 transition"
+               [class.border-accent/30]="p.id === user.playerId"
+               [class.bg-accent/5]="p.id === user.playerId"
+               [class.border-white/5]="p.id !== user.playerId"
+               [class.bg-surface-a5]="p.id !== user.playerId"
+               [class.opacity-40]="p.isDisconnected">
+            <div class="flex min-w-0 items-center gap-2">
+              <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-avatar-bg to-avatar-bg-dark text-sm font-black text-avatar-text">
+                {{ p.name.charAt(0).toUpperCase() }}
+              </div>
+              <span class="truncate text-sm font-bold text-primary">
+                {{ p.name }}
+                @if (p.isHost) { <span title="Host">👑</span> }
+                @if (p.id === user.playerId) { <span class="text-xs font-semibold text-secondary">(tú)</span> }
+              </span>
+              @if (p.wins > 0) {
+                <span class="flex shrink-0 gap-0.5" title="Partidas ganadas">
+                  @for (w of [].constructor(p.wins); track $index) {
+                    <span class="h-2 w-2 rounded-full bg-accent"></span>
+                  }
+                </span>
+              }
+              @if (p.isDisconnected) { <span class="text-xs text-muted">· sin conexión</span> }
+            </div>
+            @if (isHost() && !p.isHost) {
+              <button (click)="kickTarget.set({ id: p.id, name: p.name })"
+                      class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-danger-a15 text-xs font-bold text-danger transition active:bg-danger/30"
+                      [attr.aria-label]="'Expulsar a ' + p.name">✕</button>
+            }
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Ajustes de la partida -->
+    <div class="flex items-center justify-between rounded-2xl border border-border-a10 bg-panel px-4 py-3">
+      <span class="text-sm font-semibold text-secondary">Dados por jugador</span>
+      @if (isHost()) {
+        <div class="flex items-center gap-3">
+          <button (click)="setDice(-1)" [disabled]="room.dicePerPlayer <= 1"
+                  class="flex h-9 w-9 items-center justify-center rounded-full border-2 border-border-a15 bg-surface-a5 text-xl font-bold transition active:scale-90 disabled:opacity-30">−</button>
+          <span class="w-8 text-center text-2xl font-black text-accent">{{ room.dicePerPlayer }}</span>
+          <button (click)="setDice(1)" [disabled]="room.dicePerPlayer >= 10"
+                  class="flex h-9 w-9 items-center justify-center rounded-full border-2 border-border-a15 bg-surface-a5 text-xl font-bold transition active:scale-90 disabled:opacity-30">+</button>
+        </div>
+      } @else {
+        <span class="text-2xl font-black text-accent">{{ room.dicePerPlayer }}</span>
+      }
+    </div>
+
+    <!-- Acciones -->
+    <div class="flex flex-col gap-2">
+      @if (isHost()) {
+        <button (click)="startGame()" [disabled]="room.players.length < 2"
+                class="w-full rounded-2xl bg-gradient-to-br from-accent-light to-accent-dark py-3.5 text-lg font-extrabold tracking-widest text-accent-text shadow-lg shadow-[var(--shadow-lg)] transition active:scale-95 disabled:opacity-40">
+          {{ room.players.length < 2 ? 'ESPERANDO JUGADORES…' : 'INICIAR PARTIDA' }}
+        </button>
+        <div class="grid grid-cols-2 gap-2">
+          <button (click)="confirmLeave.set(true)"
+                  class="rounded-xl border border-border-a15 bg-surface-a5 py-2.5 text-sm font-bold text-secondary transition active:bg-surface-a15">
+            Salir
+          </button>
+          <button (click)="confirmDelete.set(true)"
+                  class="rounded-xl border border-danger-a35 bg-danger-a15 py-2.5 text-sm font-bold text-danger transition active:bg-danger/25">
+            Borrar sala
+          </button>
+        </div>
+      } @else {
+        <p class="rounded-xl border border-border-a10 bg-surface-a5 py-3 text-center text-sm text-secondary">
+          Esperando a que el host inicie la partida…
+        </p>
+        <button (click)="confirmLeave.set(true)"
+                class="rounded-xl border border-border-a15 bg-surface-a5 py-2.5 text-sm font-bold text-secondary transition active:bg-surface-a15">
+          Salir de la sala
+        </button>
+      }
+    </div>
+
+    <!-- Chat -->
+    <div class="flex min-h-[120px] flex-1 flex-col overflow-hidden rounded-2xl border border-border-a10 bg-panel">
+      <div class="border-b border-border-a10 px-3 py-2 text-xs uppercase tracking-[1px] text-secondary">Chat</div>
+      <app-chat class="flex-1 min-h-0" />
+    </div>
+  </div>
+
+  <!-- Modales -->
+  @if (kickTarget(); as target) {
+    <app-confirm-modal title="Expulsar jugador" [message]="'¿Expulsar a ' + target.name + ' de la sala?'"
+                       confirmLabel="Expulsar" [danger]="true"
+                       (confirmed)="confirmKick()" (cancelled)="kickTarget.set(null)" />
+  }
+  @if (confirmDelete()) {
+    <app-confirm-modal title="Borrar sala" message="Se echará a todos los jugadores y la sala desaparecerá. ¿Seguro?"
+                       confirmLabel="Borrar sala" [danger]="true"
+                       (confirmed)="doDeleteRoom()" (cancelled)="confirmDelete.set(false)" />
+  }
+  @if (confirmLeave()) {
+    <app-confirm-modal title="Salir de la sala" message="¿Quieres abandonar la sala?"
+                       confirmLabel="Salir" [danger]="true"
+                       (confirmed)="doLeave()" (cancelled)="confirmLeave.set(false)" />
+  }
+}

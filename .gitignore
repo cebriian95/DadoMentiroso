@@ -1,0 +1,11 @@
+# .NET
+server/bin/
+server/obj/
+
+# Node / Angular
+client/node_modules/
+client/dist/
+client/.angular/
+
+# SO
+.DS_Store

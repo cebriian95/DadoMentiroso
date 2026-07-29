@@ -1,0 +1,133 @@
+<div class="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col items-center justify-center gap-6 px-4 py-8">
+
+  <div class="relative w-full text-center">
+    <div class="absolute right-0 top-1/2 -translate-y-1/2">
+      <app-theme-toggle />
+    </div>
+    <h1 class="text-[clamp(2.4rem,9vw,3.8rem)] font-black leading-tight tracking-widest text-accent drop-shadow-[0_4px_12px_rgba(0,0,0,.5)]">
+      DADO<br>MENTIROSO
+    </h1>
+    <p class="mt-1 text-sm uppercase tracking-[6px] text-secondary">Juego online</p>
+  </div>
+
+  @if (sessionNotice()) {
+    <div class="banner-in w-full rounded-xl border border-danger-a35 bg-danger-a15 px-4 py-3 text-center text-sm font-semibold text-danger-light">
+      {{ sessionNotice() }}
+    </div>
+  }
+
+  <!-- Nombre de usuario -->
+  <div class="w-full">
+    <label for="username" class="mb-1.5 block text-xs uppercase tracking-[1px] text-secondary">Tu nombre</label>
+    <input id="username" [ngModel]="user.username()" (ngModelChange)="onUsernameInput($event)"
+           maxlength="16" autocomplete="off" placeholder="Ej: jorge56"
+           class="w-full rounded-2xl border border-border-a15 bg-surface-a5 px-4 py-3.5 text-lg font-bold text-primary placeholder:font-normal placeholder:text-muted outline-none transition focus:border-accent/60 focus:bg-surface-a10" />
+  </div>
+
+  <!-- Pestañas -->
+  <div class="grid w-full grid-cols-3 gap-1 rounded-2xl border border-border-a10 bg-panel p-1">
+    <button (click)="tab.set('create')"
+            class="rounded-xl py-2.5 text-sm font-bold transition"
+            [class.bg-accent]="tab() === 'create'" [class.text-accent-text]="tab() === 'create'"
+            [class.text-secondary]="tab() !== 'create'">
+      Crear sala
+    </button>
+    <button (click)="tab.set('join')"
+            class="rounded-xl py-2.5 text-sm font-bold transition"
+            [class.bg-accent]="tab() === 'join'" [class.text-accent-text]="tab() === 'join'"
+            [class.text-secondary]="tab() !== 'join'">
+      Unirse
+    </button>
+    <button (click)="tab.set('public')"
+            class="rounded-xl py-2.5 text-sm font-bold transition"
+            [class.bg-accent]="tab() === 'public'" [class.text-accent-text]="tab() === 'public'"
+            [class.text-secondary]="tab() !== 'public'">
+      Salas
+    </button>
+  </div>
+
+  <!-- Crear sala -->
+  @if (tab() === 'create') {
+    <div class="banner-in flex w-full flex-col gap-4">
+      <div>
+        <label for="roomName" class="mb-1.5 block text-xs uppercase tracking-[1px] text-secondary">Nombre de la sala</label>
+        <input id="roomName" [(ngModel)]="roomName" maxlength="30" autocomplete="off" placeholder="Ej: La timba de los jueves"
+               class="w-full rounded-2xl border border-border-a15 bg-surface-a5 px-4 py-3 text-base font-semibold text-primary placeholder:font-normal placeholder:text-muted outline-none transition focus:border-accent/60 focus:bg-surface-a10" />
+      </div>
+
+      <div class="flex items-center justify-between rounded-2xl border border-border-a10 bg-surface-a5 px-4 py-3">
+        <span class="text-sm font-semibold text-secondary">Sala privada</span>
+        <button (click)="togglePrivate()" role="switch" [attr.aria-checked]="isPrivate()"
+                class="relative h-7 w-12 rounded-full transition"
+                [class.bg-accent]="isPrivate()" [class.bg-surface-a15]="!isPrivate()">
+          <span class="absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-all"
+                [class.left-6]="isPrivate()" [class.left-1]="!isPrivate()"></span>
+        </button>
+      </div>
+
+      @if (isPrivate()) {
+        <div class="banner-in">
+          <label for="roomPass" class="mb-1.5 block text-xs uppercase tracking-[1px] text-secondary">Contraseña (3-20 caracteres)</label>
+          <input id="roomPass" [(ngModel)]="password" type="password" minlength="3" maxlength="20" autocomplete="off"
+                 class="w-full rounded-2xl border px-4 py-3 text-base font-semibold text-primary outline-none transition focus:bg-surface-a10"
+                 [class.border-border-a15]="passwordOk()" [class.bg-surface-a5]="passwordOk()" [class.focus:border-accent/60]="passwordOk()"
+                 [class.border-danger-a60]="!passwordOk()" [class.bg-danger-a5]="!passwordOk()" />
+          @if (!passwordOk() && password().length > 0) {
+            <p class="mt-1 text-xs text-danger-light">Mínimo 3 caracteres</p>
+          }
+        </div>
+      }
+
+      <button (click)="create()" [disabled]="!createOk()"
+              class="mt-1 w-full rounded-2xl bg-gradient-to-br from-accent-light to-accent-dark py-4 text-xl font-extrabold tracking-widest text-accent-text shadow-lg shadow-[var(--shadow-lg)] transition active:scale-95 disabled:opacity-40">
+        {{ busy() ? 'CREANDO…' : 'CREAR SALA' }}
+      </button>
+    </div>
+  }
+
+  <!-- Unirse a sala privada/con código -->
+  @if (tab() === 'join') {
+    <div class="banner-in flex w-full flex-col gap-4">
+      <div>
+        <label for="joinCode" class="mb-1.5 block text-xs uppercase tracking-[1px] text-secondary">Código de sala</label>
+        <input id="joinCode" [ngModel]="joinCode()" (ngModelChange)="joinCode.set($event.toUpperCase())" maxlength="5" autocomplete="off" placeholder="ABCDE"
+               class="w-full rounded-2xl border border-border-a15 bg-surface-a5 px-4 py-3 text-center text-2xl font-black tracking-[8px] text-accent placeholder:text-muted outline-none transition focus:border-accent/60 focus:bg-surface-a10" />
+      </div>
+      <div>
+        <label for="joinPass" class="mb-1.5 block text-xs uppercase tracking-[1px] text-secondary">Contraseña (si es privada)</label>
+        <input id="joinPass" [(ngModel)]="joinPassword" type="password" maxlength="20" autocomplete="off"
+               class="w-full rounded-2xl border border-border-a15 bg-surface-a5 px-4 py-3 text-base font-semibold text-primary outline-none transition focus:border-accent/60 focus:bg-surface-a10" />
+      </div>
+      <button (click)="join()" [disabled]="!joinOk()"
+              class="mt-1 w-full rounded-2xl bg-gradient-to-br from-accent-light to-accent-dark py-4 text-xl font-extrabold tracking-widest text-accent-text shadow-lg shadow-[var(--shadow-lg)] transition active:scale-95 disabled:opacity-40">
+        {{ busy() ? 'UNIÉNDOTE…' : 'UNIRSE' }}
+      </button>
+    </div>
+  }
+
+  <!-- Salas públicas -->
+  @if (tab() === 'public') {
+    <div class="banner-in flex w-full flex-col gap-2">
+      @if (game.publicRooms().length === 0) {
+        <div class="rounded-2xl border border-border-a10 bg-surface-a5 px-4 py-8 text-center">
+          <p class="text-sm text-secondary">No hay salas públicas esperando jugadores.</p>
+          <p class="mt-1 text-xs text-muted">¡Crea una y comparte el código!</p>
+        </div>
+      }
+      @for (room of game.publicRooms(); track room.id) {
+        <div class="flex items-center justify-between gap-3 rounded-2xl border border-border-a10 bg-surface-a5 px-4 py-3">
+          <div class="min-w-0">
+            <p class="truncate text-base font-bold text-primary">{{ room.name }}</p>
+            <p class="text-xs text-secondary">{{ room.playerCount }}/{{ room.maxPlayers }} jugadores · {{ room.id }}</p>
+          </div>
+          <button (click)="joinPublic(room.id)" [disabled]="!usernameOk() || busy()"
+                  class="shrink-0 rounded-xl bg-accent px-4 py-2 text-sm font-bold text-accent-text transition active:scale-95 disabled:opacity-40">
+            Unirse
+          </button>
+        </div>
+      }
+    </div>
+  }
+
+  <p class="text-xs text-muted">El juego del farol: apuesta, miente y sobrevive con dados.</p>
+</div>
