@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { ChatComponent } from '../../components/chat/chat.component';
+import { ColorPickerComponent } from '../../components/color-picker/color-picker.component';
 import { ConfirmModalComponent } from '../../components/confirm-modal/confirm-modal.component';
 import { GameService } from '../../services/game.service';
 import { UserService } from '../../services/user.service';
@@ -9,7 +10,7 @@ import { UserService } from '../../services/user.service';
 @Component({
   selector: 'app-lobby',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ChatComponent, ConfirmModalComponent],
+  imports: [ChatComponent, ColorPickerComponent, ConfirmModalComponent],
   templateUrl: './lobby.component.html',
 })
 export class LobbyComponent {
@@ -23,6 +24,7 @@ export class LobbyComponent {
   protected readonly kickTarget = signal<{ id: string; name: string } | null>(null);
   protected readonly confirmDelete = signal(false);
   protected readonly confirmLeave = signal(false);
+  protected readonly colorPickerOpen = signal(false);
   // Chat
   protected readonly chatOpen = signal(false);
   private lastReadCount = this.game.chat().length;

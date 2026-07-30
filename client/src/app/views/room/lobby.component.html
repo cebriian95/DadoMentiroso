@@ -41,8 +41,10 @@
                  [class.border-border-a5]="p.id !== user.playerId"
                  [class.bg-surface-a5]="p.id !== user.playerId"
                  [class.opacity-40]="p.isDisconnected">
-              <div class="flex h-9 w-9 items-center justify-center rounded-full text-sm font-black text-white shadow-sm"
-                   [style.background]="game.getPlayerColor(p.id)">
+              <div class="flex h-9 w-9 items-center justify-center rounded-full text-sm font-black text-white shadow-sm transition active:scale-90"
+                   [style.background]="game.getPlayerColor(p.id)"
+                   [class.cursor-pointer]="p.id === user.playerId"
+                   (click)="p.id === user.playerId ? colorPickerOpen.set(true) : null">
                 {{ p.name.charAt(0).toUpperCase() }}
               </div>
               <span class="truncate text-[11px] font-bold text-primary">
@@ -152,5 +154,7 @@
                          confirmLabel="Salir" [danger]="true"
                          (confirmed)="doLeave()" (cancelled)="confirmLeave.set(false)" />
     }
+
+    <app-color-picker [(open)]="colorPickerOpen" />
   </div>
 }

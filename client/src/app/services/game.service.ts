@@ -41,10 +41,6 @@ export class GameService {
   // Para re-unirse automáticamente tras una reconexión de SignalR.
   private lastJoin: { code: string; password: string | null } | null = null;
 
-  /** Mapa de id de jugador → color de avatar */
-  private readonly colorMap = new Map<string, string>();
-  private nextColor = 0;
-
   private lastRound = 0;
 
   constructor(private user: UserService) {
@@ -171,16 +167,16 @@ export class GameService {
     }
   }
 
-  // ---- Colores de jugador ----
+  // ---- Colores de jugador (gestionados por el servidor) ----
 
-  /** Devuelve un color estable para el jugador según su id. */
+  /** Devuelve el color del jugador según el índice asignado por el servidor. */
   getPlayerColor(playerId: string): string {
-    if (this.colorMap.has(playerId)) return this.colorMap.get(playerId)!;
-    const color = AVATAR_COLORS[this.nextColor % AVATAR_COLORS.length];
-    this.nextColor++;
-    this.colorMap.set(playerId, color);
-    return color;
+    const player = this.room()?.players.find(p => p.id === playerId);
+    const idx = player?.colorIndex ?? 0;
+    return AVATAR_COLORS[idx % AVATAR_COLORS.length];
   }
+
+  setPlayerColor(colorIndex: number) { return this.invoke('SetPlayerColor', colorIndex); }
 
   async createRoom(roomName: string, isPrivate: boolean, password: string | null): Promise<void> {
     await this.connect();

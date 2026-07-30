@@ -33,7 +33,7 @@ public sealed class GameEngine
     {
         var players = room.Players.Select(p => new PlayerDto(
             p.Id, p.Name, p.IsSpectator ? 0 : p.Dice.Count,
-            p.Id == room.HostId, p.IsSpectator, p.IsDisconnected, p.Wins)).ToList();
+            p.Id == room.HostId, p.IsSpectator, p.IsDisconnected, p.Wins, p.ColorIndex)).ToList();
 
         GameDto? game = null;
         if (room.Status == RoomStatus.InGame && room.Phase is { } phase)

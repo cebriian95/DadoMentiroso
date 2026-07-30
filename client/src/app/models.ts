@@ -8,6 +8,7 @@ export interface PlayerDto {
   isSpectator: boolean;
   isDisconnected: boolean;
   wins: number;
+  colorIndex: number;
 }
 
 export interface BetDto {

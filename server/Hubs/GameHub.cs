@@ -37,7 +37,7 @@ public sealed class GameHub : Hub
                 throw new HubException($"La contraseña debe tener entre {MinPasswordLength} y {MaxPasswordLength} caracteres");
         }
 
-        var player = new Player { Id = req.PlayerId, Name = playerName, ConnectionId = Context.ConnectionId };
+        var player = new Player { Id = req.PlayerId, Name = playerName, ConnectionId = Context.ConnectionId, ColorIndex = 0 };
         var room = _rooms.CreateRoom(player, roomName, password);
 
         _rooms.MapConnection(Context.ConnectionId, room.Id);
@@ -86,7 +86,8 @@ public sealed class GameHub : Hub
                     Id = req.PlayerId,
                     Name = playerName,
                     ConnectionId = Context.ConnectionId,
-                    IsSpectator = room.Status == RoomStatus.InGame // se une a mitad de partida: espectador
+                    IsSpectator = room.Status == RoomStatus.InGame, // se une a mitad de partida: espectador
+                    ColorIndex = AssignColor(room)
                 };
                 room.Players.Add(player);
             }
@@ -239,6 +240,22 @@ public sealed class GameHub : Hub
 
     // ---- Ciclo de vida ----
 
+    public Task SetPlayerColor(int colorIndex)
+    {
+        if (!TryGetContext(out var room, out var player)) return Task.CompletedTask;
+        lock (room.Lock)
+        {
+            if (room.Status == RoomStatus.InGame) return Task.CompletedTask;
+            if (colorIndex < 0 || colorIndex >= 12) return Task.CompletedTask;
+            var taken = room.Players.Where(p => p.Id != player!.Id).Select(p => p.ColorIndex).ToHashSet();
+            if (taken.Contains(colorIndex)) return Task.CompletedTask;
+            player.ColorIndex = colorIndex;
+            _rooms.Touch(room);
+            _engine.BroadcastRoomLocked(room);
+        }
+        return Task.CompletedTask;
+    }
+
     public override Task OnDisconnectedAsync(Exception? exception)
     {
         if (_rooms.TryGetRoomByConnection(Context.ConnectionId, out var room))
@@ -247,6 +264,14 @@ public sealed class GameHub : Hub
             _engine.HandleDisconnected(room, Context.ConnectionId);
         }
         return base.OnDisconnectedAsync(exception);
+    }
+
+    private static int AssignColor(Models.Room room)
+    {
+        var used = room.Players.Select(p => p.ColorIndex).ToHashSet();
+        for (int i = 0; i < 12; i++)
+            if (!used.Contains(i)) return i;
+        return 0;
     }
 
     private bool TryGetContext(out Room room, out Player? player)
