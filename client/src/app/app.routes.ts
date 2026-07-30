@@ -4,11 +4,13 @@ import { GameService } from './services/game.service';
 import { HomeComponent } from './views/home/home.component';
 import { RoomComponent } from './views/room/room.component';
 
-/** Sin sala activa no se puede estar en /sala. */
-const roomGuard: CanActivateFn = () => {
+/** Sin sala activa no se puede estar en /sala, pero primero intenta reconectar. */
+const roomGuard: CanActivateFn = async () => {
   const game = inject(GameService);
   const router = inject(Router);
-  return game.room() ? true : router.createUrlTree(['/']);
+  if (game.room()) return true;
+  const ok = await game.tryReconnect();
+  return ok || router.createUrlTree(['/']);
 };
 
 export const routes: Routes = [

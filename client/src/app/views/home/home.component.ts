@@ -33,15 +33,25 @@ export class HomeComponent implements OnInit, OnDestroy {
 
   protected readonly usernameOk = computed(() => this.user.username().trim().length >= 1);
   protected readonly passwordOk = computed(() => !this.isPrivate() || (this.password().length >= 3 && this.password().length <= 20));
-  protected readonly createOk = computed(() => this.usernameOk() && this.roomName().trim().length >= 1 && this.passwordOk() && !this.busy());
-  protected readonly joinOk = computed(() => this.usernameOk() && this.joinCode().trim().length >= 4 && !this.busy());
+  protected readonly createOk = computed(() => this.usernameOk() && this.roomName().trim().length >= 1 && this.passwordOk() && !this.busy() && !this.game.reconnecting());
+  protected readonly joinOk = computed(() => this.usernameOk() && this.joinCode().trim().length >= 4 && !this.busy() && !this.game.reconnecting());
 
   ngOnInit() {
     const ended = this.game.sessionEnded();
     if (ended === 'kicked') this.sessionNotice.set('El host te ha expulsado de la sala');
     if (ended === 'deleted') this.sessionNotice.set('La sala ha sido eliminada');
     this.game.clearSessionEnded();
+    void this.autoReconnect();
     void this.game.watchPublicRooms();
+  }
+
+  private async autoReconnect() {
+    const code = localStorage.getItem('dmRoomCode');
+    if (!code) return;
+    this.busy.set(true);
+    const ok = await this.game.tryReconnect();
+    this.busy.set(false);
+    if (ok) this.router.navigate(['/sala']);
   }
 
   ngOnDestroy() {

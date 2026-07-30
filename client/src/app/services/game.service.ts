@@ -13,6 +13,10 @@ const AVATAR_COLORS = [
   '#06a77d', '#9b5de5', '#e63946', '#264653',
 ];
 
+/** Claves de localStorage para persistir la sesión activa y reconectar al recargar. */
+const ROOM_CODE_KEY = 'dmRoomCode';
+const ROOM_PASSWORD_KEY = 'dmRoomPassword';
+
 /** Conexión SignalR + estado global de la sala. Los componentes solo leen señales. */
 @Injectable({ providedIn: 'root' })
 export class GameService {
@@ -27,6 +31,8 @@ export class GameService {
   readonly actionError = signal<string | null>(null);
   readonly sessionEnded = signal<'kicked' | 'deleted' | null>(null);
   readonly connected = signal(false);
+  /** Indica si se está intentando reconectar (para mostrar feedback visual). */
+  readonly reconnecting = signal(false);
   /** Apuestas de la ronda actual (historial). Se limpia al empezar una ronda nueva. */
   readonly roundBets = signal<BetDto[]>([]);
   /** Jugador que acaba de perder un dado (para animación -1). */
@@ -110,6 +116,8 @@ export class GameService {
   }
 
   private endSession(reason: 'kicked' | 'deleted') {
+    localStorage.removeItem(ROOM_CODE_KEY);
+    localStorage.removeItem(ROOM_PASSWORD_KEY);
     this.room.set(null);
     this.myDice.set([]);
     this.reveal.set(null);
@@ -131,6 +139,37 @@ export class GameService {
 
   clearError() { this.actionError.set(null); }
   clearSessionEnded() { this.sessionEnded.set(null); }
+
+  /** Intenta reconectar a la última sala guardada en localStorage. Devuelve true si tuvo éxito. */
+  async tryReconnect(): Promise<boolean> {
+    const code = localStorage.getItem(ROOM_CODE_KEY);
+    if (!code) return false;
+
+    this.reconnecting.set(true);
+    try {
+      const password = localStorage.getItem(ROOM_PASSWORD_KEY) || null;
+      await this.connect();
+      const room = await this.invoke<RoomDto>('JoinRoom', {
+        playerId: this.user.playerId,
+        playerName: this.user.username(),
+        roomCode: code,
+        password,
+      });
+      this.room.set(room);
+      this.chat.set([]);
+      this.lastJoin = { code: room.id, password };
+      localStorage.setItem(ROOM_CODE_KEY, room.id);
+      if (password) localStorage.setItem(ROOM_PASSWORD_KEY, password);
+      this.reconnecting.set(false);
+      return true;
+    } catch {
+      localStorage.removeItem(ROOM_CODE_KEY);
+      localStorage.removeItem(ROOM_PASSWORD_KEY);
+      this.reconnecting.set(false);
+      this.actionError.set('No se pudo reconectar a la sala');
+      return false;
+    }
+  }
 
   // ---- Colores de jugador ----
 
@@ -155,6 +194,9 @@ export class GameService {
     this.room.set(room);
     this.chat.set([]);
     this.lastJoin = { code: room.id, password };
+    localStorage.setItem(ROOM_CODE_KEY, room.id);
+    if (password) localStorage.setItem(ROOM_PASSWORD_KEY, password);
+    else localStorage.removeItem(ROOM_PASSWORD_KEY);
   }
 
   async joinRoom(code: string, password: string | null): Promise<void> {
@@ -168,10 +210,15 @@ export class GameService {
     this.room.set(room);
     this.chat.set([]);
     this.lastJoin = { code: room.id, password };
+    localStorage.setItem(ROOM_CODE_KEY, room.id);
+    if (password) localStorage.setItem(ROOM_PASSWORD_KEY, password);
+    else localStorage.removeItem(ROOM_PASSWORD_KEY);
   }
 
   async leaveRoom(): Promise<void> {
     this.lastJoin = null;
+    localStorage.removeItem(ROOM_CODE_KEY);
+    localStorage.removeItem(ROOM_PASSWORD_KEY);
     try { await this.hub.invoke('LeaveRoom'); } catch { /* la sala puede no existir ya */ }
     this.room.set(null);
     this.myDice.set([]);
