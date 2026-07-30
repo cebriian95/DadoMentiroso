@@ -1,23 +1,24 @@
 @if (room(); as room) {
   <div class="relative mx-auto flex h-dvh w-full max-w-[480px] flex-col lg:grid lg:max-w-[1300px] lg:grid-cols-[200px_1fr_320px] lg:gap-4 lg:p-4">
 
-    <!-- Rivales: panel de escritorio -->
+    <!-- Rivales: panel desktop -->
     <aside class="hidden min-h-0 flex-col gap-3 overflow-hidden rounded-2xl border border-border-a10 bg-panel p-3 lg:flex">
       <h3 class="text-xs uppercase tracking-[1px] text-secondary">Rivales</h3>
       <div class="flex flex-1 flex-col gap-2 overflow-y-auto">
         @for (p of activeOpponents(); track p.id) {
-          <div class="flex items-center gap-2 rounded-xl border px-2 py-2 transition"
+          <div class="relative flex items-center gap-2 rounded-xl border px-2 py-2 transition"
                [class.border-accent/60]="gameState()?.currentTurnPlayerId === p.id && phase() === 'Betting'"
                [class.bg-accent/5]="gameState()?.currentTurnPlayerId === p.id && phase() === 'Betting'"
                [class.turn-ring]="gameState()?.currentTurnPlayerId === p.id && phase() === 'Betting'"
                [class.border-border-a10]="!(gameState()?.currentTurnPlayerId === p.id && phase() === 'Betting')"
                [class.bg-surface-a5]="!(gameState()?.currentTurnPlayerId === p.id && phase() === 'Betting')"
                [class.opacity-40]="p.isDisconnected">
-            <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-avatar-bg to-avatar-bg-dark text-sm font-black text-avatar-text">
+            <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-black text-white shadow-sm"
+                 [style.background]="game.getPlayerColor(p.id)">
               {{ p.name.charAt(0).toUpperCase() }}
             </div>
             <div class="min-w-0 flex-1">
-              <p class="truncate text-xs font-bold text-primary">{{ p.name }}</p>
+              <p class="truncate text-xs font-bold" [style.color]="game.getPlayerColor(p.id)">{{ p.name }}</p>
               <p class="text-[10px] text-secondary">{{ p.diceCount }} dados</p>
             </div>
           </div>
@@ -33,56 +34,49 @@
       }
     </aside>
 
-    <!-- Centro: cabecera, mesa y acciones -->
+    <!-- Centro -->
     <main class="relative flex min-h-0 flex-1 flex-col overflow-hidden">
 
       <!-- Cabecera -->
       <div class="flex items-center justify-between gap-2 px-3 pt-3">
         <div class="min-w-0">
           <h2 class="truncate text-base font-black tracking-wide text-accent">{{ room.name }}</h2>
-          <p class="whitespace-nowrap text-[11px] uppercase tracking-[1px] text-secondary">
-            Ronda {{ gameState()?.roundNumber ?? 1 }} · {{ gameState()?.totalDiceInPlay ?? 0 }} dados
-          </p>
+          <p class="whitespace-nowrap text-[11px] uppercase tracking-[1px] text-secondary">Ronda {{ gameState()?.roundNumber ?? 1 }} · {{ gameState()?.totalDiceInPlay ?? 0 }} dados</p>
         </div>
         <div class="flex shrink-0 items-center gap-2">
-          <app-theme-toggle />
           <button (click)="toggleChat()" class="relative rounded-xl border border-border-a15 bg-surface-a5 px-3 py-2 text-sm font-bold text-primary transition active:bg-surface-a15 lg:hidden">
             Chat
             @if (unread() > 0) {
-              <span class="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-danger px-1 text-[10px] font-black text-primary">
-                {{ unread() > 9 ? '9+' : unread() }}
-              </span>
+              <span class="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-danger px-1 text-[10px] font-black text-primary">{{ unread() > 9 ? '9+' : unread() }}</span>
             }
           </button>
-          <button (click)="confirmLeave.set(true)" class="rounded-xl border border-border-a15 bg-surface-a5 px-3 py-2 text-sm font-bold text-primary transition active:bg-surface-a15">
-            Salir
-          </button>
+          <button (click)="confirmLeave.set(true)" class="rounded-xl border border-border-a15 bg-surface-a5 px-3 py-2 text-sm font-bold text-primary transition active:bg-surface-a15">Salir</button>
         </div>
       </div>
 
-      <!-- Mesa: rivales (móvil) -->
-      <div class="flex gap-2 overflow-x-auto px-3 pb-1 pt-3 lg:hidden">
+      <!-- Rivales móvil -->
+      <div class="flex gap-2 overflow-x-auto px-3 pb-1 pt-2 lg:hidden">
         @for (p of activeOpponents(); track p.id) {
-          <div class="flex shrink-0 items-center gap-2 rounded-2xl border px-2.5 py-1.5 transition"
+          <div class="relative shrink-0 items-center gap-2 rounded-2xl border px-2.5 py-1.5 transition"
                [class.border-accent/60]="gameState()?.currentTurnPlayerId === p.id && phase() === 'Betting'"
                [class.bg-accent/5]="gameState()?.currentTurnPlayerId === p.id && phase() === 'Betting'"
                [class.turn-ring]="gameState()?.currentTurnPlayerId === p.id && phase() === 'Betting'"
                [class.border-border-a10]="!(gameState()?.currentTurnPlayerId === p.id && phase() === 'Betting')"
                [class.bg-surface-a5]="!(gameState()?.currentTurnPlayerId === p.id && phase() === 'Betting')"
                [class.opacity-40]="p.isDisconnected">
-            <div class="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-avatar-bg to-avatar-bg-dark text-xs font-black text-avatar-text">
+            <div class="flex h-7 w-7 items-center justify-center rounded-full text-xs font-black text-white shadow-sm"
+                 [style.background]="game.getPlayerColor(p.id)">
               {{ p.name.charAt(0).toUpperCase() }}
             </div>
             <div class="flex flex-col leading-tight">
-              <span class="max-w-[72px] truncate text-[11px] font-bold text-primary">{{ p.name }}</span>
+              <span class="max-w-[72px] truncate text-[11px] font-bold" [style.color]="game.getPlayerColor(p.id)">{{ p.name }}</span>
               <span class="text-[10px] text-secondary">{{ p.diceCount }} dados</span>
             </div>
             @if (p.isDisconnected) { <span class="text-[9px] uppercase text-muted">off</span> }
           </div>
         }
       </div>
-
-      <!-- Espectadores (móvil) -->
+      <!-- Espectadores móvil -->
       @if (spectators().length > 0) {
         <div class="flex flex-wrap items-center gap-1.5 px-3 pb-1 lg:hidden">
           <span class="text-[10px] uppercase tracking-[1px] text-muted">Espectadores:</span>
@@ -92,14 +86,15 @@
         </div>
       }
 
-      <!-- Apuesta actual / estado de fase -->
+      <!-- Apuesta actual (clicable para ver historial) -->
       <div class="px-3 py-2">
         @if (currentBet(); as bet) {
-          <div class="banner-in flex items-center justify-center gap-3 rounded-2xl border border-accent/30 bg-gradient-to-b from-accent/10 to-transparent px-4 py-3">
-            <span class="text-sm font-semibold text-secondary">{{ bet.playerName }} dice:</span>
-            <span class="text-2xl font-black text-accent">{{ bet.quantity }} ×</span>
+          <button (click)="betHistoryOpen.set(true)" class="banner-in flex w-full items-center justify-center gap-2 whitespace-nowrap rounded-2xl border border-accent/30 bg-gradient-to-b from-accent/10 to-transparent px-3 py-3 text-center transition active:scale-[0.97]">
+            <span class="text-sm font-bold" [style.color]="game.getPlayerColor(bet.playerId)">{{ bet.playerName }}</span>
+            <span class="text-secondary text-sm font-semibold">dice:</span>
+            <span class="text-xl font-black text-accent">{{ bet.quantity }}×</span>
             <app-dice [value]="bet.value" size="sm" />
-          </div>
+          </button>
         } @else {
           <div class="rounded-2xl border border-border-a10 bg-panel px-4 py-3 text-center text-sm text-secondary">
             {{ phase() === 'Rolling' ? '🎲 Tirando dados…' : 'Sin apuestas todavía' }}
@@ -115,19 +110,38 @@
             <p class="mt-1 text-sm text-secondary">Eres espectador. Puedes seguir el chat de la partida.</p>
           </div>
         } @else if (reveal(); as r) {
-          <!-- Revelado: dados de todos -->
+          <!-- Revelado visual -->
           <div class="banner-in flex max-h-full w-full flex-col items-center gap-2 overflow-y-auto rounded-2xl border border-border-a10 bg-panel p-3">
-            <p class="text-center text-sm font-bold leading-snug text-accent">{{ revealText() }}</p>
-            @if (r.winnerName) {
-              <p class="text-center text-base font-black uppercase tracking-widest text-accent">🏆 {{ r.winnerName }} gana la partida</p>
+            <div class="text-center text-xl font-black uppercase tracking-widest" [class]="resolutionColor()">
+              {{ resolutionLabel() }}
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-sm font-bold" [style.color]="game.getPlayerColor(r.bet.playerId)">{{ r.bet.playerName }}</span>
+              <span class="text-sm text-secondary">apostó</span>
+              <span class="text-xl font-black text-accent">{{ r.bet.quantity }} ×🎲{{ r.bet.value }}</span>
+            </div>
+            <div class="text-sm text-secondary">
+              Había <strong class="text-accent">{{ r.actualCount }}</strong> dados de valor {{ r.bet.value }}
+            </div>
+            @if (loserText()) {
+              <div class="mt-1 text-sm font-bold text-danger">✖ {{ loserText() }} pierde un dado</div>
             }
-            <div class="flex flex-col gap-2">
+            <div class="flex flex-col gap-2 w-full mt-1">
               @for (rp of r.players; track rp.playerId; let pi = $index) {
-                <div class="flex items-center gap-2">
-                  <span class="w-20 truncate text-right text-xs font-bold"
-                        [class.text-accent]="rp.playerId === user.playerId"
-                        [class.text-secondary]="rp.playerId !== user.playerId">{{ rp.playerName }}</span>
-                  <div class="flex flex-wrap gap-1">
+                <div class="relative flex items-center gap-2 rounded-xl border px-3 py-1.5"
+                     [class.border-danger/60]="loserPlayers().includes(rp.playerId)"
+                     [class.bg-danger/10]="loserPlayers().includes(rp.playerId)"
+                     [class.border-border-a10]="!loserPlayers().includes(rp.playerId)"
+                     [class.bg-surface-a5]="!loserPlayers().includes(rp.playerId)">
+                  @if (loserPlayers().includes(rp.playerId)) {
+                    <div class="absolute -left-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-danger text-[9px] font-black text-primary shadow-lg animate-bounce" title="-1 dado">−1</div>
+                  }
+                  <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-black text-white shadow-sm"
+                       [style.background]="game.getPlayerColor(rp.playerId)">
+                    {{ rp.playerName.charAt(0).toUpperCase() }}
+                  </div>
+                  <span class="w-20 truncate text-xs font-bold" [style.color]="game.getPlayerColor(rp.playerId)">{{ rp.playerName }}</span>
+                  <div class="flex flex-wrap gap-0.5">
                     @for (d of rp.dice; track $index) {
                       <app-dice [value]="d" size="xs" [revealPop]="true" [animationDelay]="(pi * 0.1 + $index * 0.04) + 's'" />
                     }
@@ -136,15 +150,18 @@
                 </div>
               }
             </div>
+            @if (r.winnerName) {
+              <p class="text-center text-base font-black uppercase tracking-widest text-accent">🏆 {{ r.winnerName }} gana la partida</p>
+            }
             <p class="text-[11px] text-muted">Nueva ronda en {{ phaseSecondsLeft() }}s…</p>
           </div>
         } @else {
-          <span class="text-xs uppercase tracking-[1px] text-secondary">
-            Tus dados ({{ myPlayer()?.diceCount ?? 0 }})
-          </span>
+          <span class="text-xs uppercase tracking-[1px] text-secondary">Tus dados ({{ myPlayer()?.diceCount ?? 0 }})</span>
           <div class="flex max-w-full flex-wrap items-center justify-center gap-2">
             @for (d of game.myDice(); track $index) {
-              <app-dice [value]="d" [rolling]="phase() === 'Rolling' && !hasRolled()" [animationDelay]="($index * 0.06) + 's'" />
+              <app-dice [value]="d" [hidden]="phase() === 'Rolling' && !hasRolled() && !rollingNow()"
+                        [rolling]="rollingNow()"
+                        [animationDelay]="($index * 0.06) + 's'" />
             }
           </div>
         }
@@ -153,36 +170,30 @@
       <!-- Zona de acción -->
       <div class="shrink-0 px-3 pb-3">
         @if (!amSpectator() && !reveal()) {
-
-          <!-- Fase de tirada -->
           @if (phase() === 'Rolling') {
             <div class="flex flex-col items-center gap-1.5">
-              <button (click)="rollDice()" [disabled]="hasRolled()"
+              <button (click)="rollDice()" [disabled]="hasRolled() || rollingNow()"
                       class="rounded-2xl bg-gradient-to-br from-accent-light to-accent-dark px-12 py-4 text-xl font-extrabold tracking-widest text-accent-text shadow-[var(--shadow-lg)] transition active:scale-95 disabled:opacity-40">
-                {{ hasRolled() ? '¡SUERTE!' : 'TIRAR' }}
+                {{ hasRolled() || rollingNow() ? '¡SUERTE!' : 'TIRAR' }}
               </button>
               <span class="text-xs text-secondary">Las apuestas empiezan en {{ phaseSecondsLeft() }}s</span>
             </div>
           }
-
-          <!-- Fase de apuestas -->
           @if (phase() === 'Betting') {
             <div class="flex flex-col items-center gap-2">
               <div class="flex items-center gap-2 text-sm">
                 @if (isMyTurn()) {
                   <span class="font-black uppercase tracking-widest text-accent">Tu turno</span>
                 } @else {
-                  <span class="text-secondary">Turno de <strong class="text-primary">{{ turnPlayerName() }}</strong></span>
+                  <span class="text-secondary">Turno de <strong class="font-bold" [style.color]="game.getPlayerColor(gameState()?.currentTurnPlayerId ?? '')">{{ turnPlayerName() }}</strong></span>
                 }
                 @if (turnSecondsLeft() !== null) {
                   <span class="rounded-full bg-surface-a10 px-2 py-0.5 text-xs font-bold tabular-nums"
-                        [class.text-danger-light]="turnSecondsLeft()! <= 30"
-                        [class.text-secondary]="turnSecondsLeft()! > 30">
+                        [class.text-danger-light]="turnSecondsLeft()! <= 30" [class.text-secondary]="turnSecondsLeft()! > 30">
                     {{ turnTimeText() }}
                   </span>
                 }
               </div>
-
               @if (isMyTurn()) {
                 @if (!noRaisePossible()) {
                   <div class="flex items-end justify-center gap-4">
@@ -192,19 +203,10 @@
                 }
                 <div class="grid w-full max-w-[420px] gap-2" [class.grid-cols-3]="!noRaisePossible()" [class.grid-cols-2]="noRaisePossible()">
                   @if (!noRaisePossible()) {
-                    <button (click)="placeBet()" [disabled]="!betValid()"
-                            class="rounded-2xl bg-gradient-to-br from-accent-light to-accent-dark py-3.5 text-base font-extrabold text-accent-text shadow-[var(--shadow-lg)] transition active:scale-95 disabled:opacity-40">
-                      Apostar
-                    </button>
+                    <button (click)="placeBet()" [disabled]="!betValid()" class="rounded-2xl bg-gradient-to-br from-accent-light to-accent-dark py-3.5 text-base font-extrabold text-accent-text shadow-[var(--shadow-lg)] transition active:scale-95 disabled:opacity-40">Apostar</button>
                   }
-                  <button (click)="doubt()" [disabled]="!currentBet()"
-                          class="rounded-2xl border border-danger/40 bg-danger-a15 py-3.5 text-base font-extrabold uppercase text-danger transition active:scale-95 disabled:opacity-30">
-                    ¡Mentira!
-                  </button>
-                  <button (click)="exact()" [disabled]="!currentBet()"
-                          class="rounded-2xl border border-success-a40 bg-success-a15 py-3.5 text-base font-extrabold uppercase text-success transition active:scale-95 disabled:opacity-30">
-                    ¡Exacto!
-                  </button>
+                  <button (click)="doubt()" [disabled]="!currentBet()" class="rounded-2xl border border-danger/40 bg-danger-a15 py-3.5 text-base font-extrabold uppercase text-danger transition active:scale-95 disabled:opacity-30">¡Mentira!</button>
+                  <button (click)="exact()" [disabled]="!currentBet()" class="rounded-2xl border border-success-a40 bg-success-a15 py-3.5 text-base font-extrabold uppercase text-success transition active:scale-95 disabled:opacity-30">¡Exacto!</button>
                 </div>
               }
             </div>
@@ -212,34 +214,53 @@
         }
       </div>
 
-      <!-- Cajón de chat (móvil): tocar fuera lo cierra -->
+      <!-- Cajón de chat móvil -->
       @if (chatOpen()) {
         <div class="fixed inset-0 z-10 bg-black/30 lg:hidden" (click)="toggleChat()"></div>
       }
-      <div class="absolute inset-x-0 bottom-0 z-20 flex h-[70%] flex-col rounded-t-3xl border-t border-border-a15 bg-gradient-to-b from-modal-from to-modal-to shadow-[var(--shadow-lg)] transition-transform duration-300 lg:hidden"
+      <div class="fixed inset-x-0 bottom-0 z-20 flex h-[70%] flex-col rounded-t-3xl border-t border-border-a15 bg-gradient-to-b from-modal-from to-modal-to shadow-[var(--shadow-lg)] transition-transform duration-300 lg:hidden"
            [class.translate-y-full]="!chatOpen()">
         <button (click)="toggleChat()" class="flex shrink-0 items-center justify-between px-4 py-3">
           <span class="text-sm font-bold uppercase tracking-[1px] text-secondary">Chat</span>
           <span class="text-secondary">▾</span>
         </button>
-        <div class="min-h-0 flex-1 border-t border-border-a10">
-          <app-chat class="h-full" />
-        </div>
+        <div class="min-h-0 flex-1 border-t border-border-a10"><app-chat class="h-full" /></div>
       </div>
 
+      <!-- Modal historial de apuestas -->
+      @if (betHistoryOpen()) {
+        <div class="fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 p-5 backdrop-blur-sm" (click)="betHistoryOpen.set(false)">
+          <div class="w-[320px] max-h-[70vh] overflow-y-auto rounded-2xl border border-border-a10 bg-gradient-to-b from-modal-from to-modal-to p-4 shadow-[var(--shadow-lg)]" (click)="$event.stopPropagation()">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="text-sm font-bold uppercase tracking-[1px] text-secondary">Apuestas de la ronda</h3>
+              <button (click)="betHistoryOpen.set(false)" class="flex h-7 w-7 items-center justify-center rounded-full bg-surface-a5 text-xs text-muted transition active:bg-surface-a15">✕</button>
+            </div>
+            @if (game.roundBets().length === 0) {
+              <p class="text-sm text-muted text-center py-4">Solo hay una apuesta en esta ronda</p>
+            }
+            @for (bet of game.roundBets(); track $index) {
+              <div class="flex items-center gap-3 border-b border-border-a6 py-2 last:border-0">
+                <span class="text-accent text-sm font-black tabular-nums">{{ $index + 1 }}.</span>
+                <span class="text-sm font-bold truncate" [style.color]="game.getPlayerColor(bet.playerId)">{{ bet.playerName }}</span>
+                <span class="text-xs text-muted">dice</span>
+                <span class="text-lg font-black text-accent ml-auto">{{ bet.quantity }}×</span>
+                <app-dice [value]="bet.value" size="xs" />
+              </div>
+            }
+          </div>
+        </div>
+      }
+
+      <!-- Modal salir -->
       @if (confirmLeave()) {
-        <app-confirm-modal title="Salir de la partida" message="Perderás tus dados y quedarás fuera de la sala. ¿Seguro?"
-                           confirmLabel="Salir" [danger]="true"
-                           (confirmed)="doLeave()" (cancelled)="confirmLeave.set(false)" />
+        <app-confirm-modal title="Salir de la partida" message="Perderás tus dados y quedarás fuera de la sala. ¿Seguro?" confirmLabel="Salir" [danger]="true" (confirmed)="doLeave()" (cancelled)="confirmLeave.set(false)" />
       }
     </main>
 
-    <!-- Chat: panel de escritorio -->
+    <!-- Chat desktop -->
     <aside class="hidden min-h-0 flex-col overflow-hidden rounded-2xl border border-border-a10 bg-panel lg:flex">
       <div class="border-b border-border-a10 px-3 py-2 text-xs uppercase tracking-[1px] text-secondary">Chat</div>
-      <div class="min-h-0 flex-1">
-        <app-chat class="h-full" />
-      </div>
+      <div class="min-h-0 flex-1"><app-chat class="h-full" /></div>
     </aside>
   </div>
 }

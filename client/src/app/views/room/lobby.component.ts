@@ -23,13 +23,19 @@ export class LobbyComponent {
   protected readonly kickTarget = signal<{ id: string; name: string } | null>(null);
   protected readonly confirmDelete = signal(false);
   protected readonly confirmLeave = signal(false);
+  // Chat
+  protected readonly chatOpen = signal(false);
+  private lastReadCount = this.game.chat().length;
+  protected readonly unread = computed(() => {
+    if (this.chatOpen()) return 0;
+    const since = this.game.chat().slice(this.lastReadCount);
+    return since.filter(m => m.playerId !== this.user.playerId).length;
+  });
 
   protected copyCode() {
     const code = this.room()?.id;
     if (!code) return;
-    try {
-      void navigator.clipboard?.writeText(code);
-    } catch { /* portapapeles no disponible */ }
+    try { void navigator.clipboard?.writeText(code); } catch { }
     this.copied.set(true);
     setTimeout(() => this.copied.set(false), 1500);
   }
@@ -48,7 +54,7 @@ export class LobbyComponent {
 
   protected doDeleteRoom() {
     this.confirmDelete.set(false);
-    void this.game.deleteRoom(); // el servidor emite RoomDeleted y volvemos al inicio
+    void this.game.deleteRoom();
   }
 
   protected async doLeave() {
@@ -57,7 +63,15 @@ export class LobbyComponent {
     this.router.navigate(['/']);
   }
 
-  protected startGame() {
-    void this.game.startGame();
+  protected startGame() { void this.game.startGame(); }
+
+  protected winDots(wins: number): number[] {
+    return new Array(Math.min(wins, 12));
+  }
+
+  protected toggleChat() {
+    const opening = !this.chatOpen();
+    this.chatOpen.set(opening);
+    if (opening) this.lastReadCount = this.game.chat().length;
   }
 }

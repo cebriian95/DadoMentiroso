@@ -1,7 +1,17 @@
 import { Injectable, signal } from '@angular/core';
 import * as signalR from '@microsoft/signalr';
-import { ChatMessageDto, PublicRoomDto, RevealDto, RoomDto } from '../models';
+import { BetDto, ChatMessageDto, PublicRoomDto, RevealDto, RoomDto } from '../models';
 import { UserService } from './user.service';
+
+/**
+ * 12 colores distinguibles para los avatares, elegidos para que queden bien
+ * sobre fondo oscuro y sean legibles con texto blanco.
+ */
+const AVATAR_COLORS = [
+  '#d62828', '#22577a', '#1b7a4a', '#7209b7',
+  '#e76f51', '#2a9d8f', '#c1121f', '#5c4d7d',
+  '#06a77d', '#9b5de5', '#e63946', '#264653',
+];
 
 /** Conexión SignalR + estado global de la sala. Los componentes solo leen señales. */
 @Injectable({ providedIn: 'root' })
@@ -17,9 +27,19 @@ export class GameService {
   readonly actionError = signal<string | null>(null);
   readonly sessionEnded = signal<'kicked' | 'deleted' | null>(null);
   readonly connected = signal(false);
+  /** Apuestas de la ronda actual (historial). Se limpia al empezar una ronda nueva. */
+  readonly roundBets = signal<BetDto[]>([]);
+  /** Jugador que acaba de perder un dado (para animación -1). */
+  readonly loserPlayers = signal<string[]>([]);
 
   // Para re-unirse automáticamente tras una reconexión de SignalR.
   private lastJoin: { code: string; password: string | null } | null = null;
+
+  /** Mapa de id de jugador → color de avatar */
+  private readonly colorMap = new Map<string, string>();
+  private nextColor = 0;
+
+  private lastRound = 0;
 
   constructor(private user: UserService) {
     const hubUrl = location.port === '4200'
@@ -34,17 +54,33 @@ export class GameService {
     this.hub.on('RoomState', (room: RoomDto) => {
       const prev = this.room();
       this.room.set(room);
-      // Nueva ronda: limpiar overlay de revelado.
+
+      // Nueva ronda: limpiar historial de apuestas y loser.
       if (room.game?.phase === 'Rolling' && prev?.game?.phase !== 'Rolling') {
         this.reveal.set(null);
+        this.roundBets.set([]);
+        this.loserPlayers.set([]);
+        this.lastRound = room.game.roundNumber;
       }
       if (room.status === 'InGame') {
         this.gameOver.set(null);
+      }
+
+      // Si hay apuesta actual (al reconectar o tras apuesta) añadirla al historial.
+      const bet = room.game?.currentBet;
+      if (bet && room.game?.phase === 'Betting') {
+        const existing = this.roundBets();
+        if (existing.length === 0 || existing[existing.length - 1].playerId !== bet.playerId) {
+          this.roundBets.update(b => [...b, bet]);
+        }
       }
     });
     this.hub.on('YourDice', (dice: number[]) => this.myDice.set(dice));
     this.hub.on('RevealAll', (dto: RevealDto) => {
       this.reveal.set(dto);
+      this.roundBets.set([]);
+      this.loserPlayers.set(dto.loserIds);
+      setTimeout(() => this.loserPlayers.set([]), 7000);
       const mine = dto.players.find(p => p.playerId === this.user.playerId);
       if (mine) this.myDice.set(mine.dice);
     });
@@ -88,7 +124,6 @@ export class GameService {
       return await this.hub.invoke<T>(method, ...args);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      // Los HubException llegan con prefijo; limpiar para mostrar solo el mensaje.
       this.actionError.set(msg.replace(/^.*HubException:\s*/i, '').replace(/^An unexpected error occurred invoking '.*?' on the server\.\s*/i, '') || 'Error inesperado');
       throw err;
     }
@@ -96,6 +131,17 @@ export class GameService {
 
   clearError() { this.actionError.set(null); }
   clearSessionEnded() { this.sessionEnded.set(null); }
+
+  // ---- Colores de jugador ----
+
+  /** Devuelve un color estable para el jugador según su id. */
+  getPlayerColor(playerId: string): string {
+    if (this.colorMap.has(playerId)) return this.colorMap.get(playerId)!;
+    const color = AVATAR_COLORS[this.nextColor % AVATAR_COLORS.length];
+    this.nextColor++;
+    this.colorMap.set(playerId, color);
+    return color;
+  }
 
   async createRoom(roomName: string, isPrivate: boolean, password: string | null): Promise<void> {
     await this.connect();

@@ -1,7 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { ThemeToggleComponent } from '../../components/theme-toggle/theme-toggle.component';
 import { GameService } from '../../services/game.service';
 import { UserService } from '../../services/user.service';
 
@@ -11,7 +10,7 @@ type Tab = 'create' | 'join' | 'public';
 @Component({
   selector: 'app-home',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, ThemeToggleComponent],
+  imports: [FormsModule],
   templateUrl: './home.component.html',
 })
 export class HomeComponent implements OnInit, OnDestroy {

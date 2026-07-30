@@ -16,7 +16,7 @@ import { UserService } from '../../services/user.service';
         }
         @for (msg of game.chat(); track $index) {
           <div class="text-sm leading-snug break-words">
-            <span class="font-bold" [class.text-accent]="msg.playerId === user.playerId" [class.text-secondary]="msg.playerId !== user.playerId">{{ msg.playerName }}:</span>
+            <span class="font-bold" [style.color]="game.getPlayerColor(msg.playerId)">{{ msg.playerName }}:</span>
             <span class="text-secondary"> {{ msg.text }}</span>
           </div>
         }

@@ -34,9 +34,6 @@
   --color-danger-a60: var(--danger-a60);
   --color-success-a15: var(--success-a15);
   --color-success-a40: var(--success-a40);
-  --color-avatar-bg: var(--avatar-bg);
-  --color-avatar-bg-dark: var(--avatar-bg-dark);
-  --color-avatar-text: var(--avatar-text);
   --color-modal-from: var(--modal-from);
   --color-modal-to: var(--modal-to);
 }
@@ -84,76 +81,11 @@
   --success-a15: rgba(52, 211, 153, 0.15);
   --success-a40: rgba(52, 211, 153, 0.40);
 
-  --avatar-bg: #047857;
-  --avatar-bg-dark: #064e3b;
-  --avatar-text: #d1fae5;
-
   --modal-from: #1a1f2e;
   --modal-to: #0f1420;
 
   --shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
   --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.45);
-}
-
-:root.light, .light {
-  /* Fieltro crema de día: cálido, con tinta verde oscuro */
-  --bg-felt: radial-gradient(ellipse at center, #f6f1e3 0%, #e6dfc8 100%);
-  --panel-bg: rgba(255, 255, 255, 0.62);
-
-  --surface-a5: rgba(255, 255, 255, 0.50);
-  --surface-a8: rgba(255, 255, 255, 0.60);
-  --surface-a10: rgba(255, 255, 255, 0.70);
-  --surface-a15: rgba(255, 255, 255, 0.85);
-  --surface-a20: rgba(255, 255, 255, 0.95);
-  --surface-a25: rgba(255, 255, 255, 1.00);
-  --surface-a30: rgba(255, 255, 255, 1.00);
-  --surface-a70: rgba(255, 255, 255, 0.85);
-  --surface-a85: rgba(250, 248, 240, 0.96);
-
-  --border-a6: rgba(43, 54, 32, 0.07);
-  --border-a10: rgba(43, 54, 32, 0.11);
-  --border-a12: rgba(43, 54, 32, 0.14);
-  --border-a15: rgba(43, 54, 32, 0.17);
-  --border-a18: rgba(43, 54, 32, 0.20);
-  --border-a20: rgba(43, 54, 32, 0.24);
-  --border-a40: rgba(43, 54, 32, 0.40);
-
-  --text-primary: #22301f;
-  --text-secondary: #55614b;
-  --text-muted: #8a937f;
-
-  --accent: #a16207;
-  --accent-light: #f7d954;
-  --accent-dark: #d4a017;
-  --accent-text: #241a02;
-
-  --danger: #c62828;
-  --danger-light: #d32f2f;
-  --danger-a5: rgba(198, 40, 40, 0.05);
-  --danger-a15: rgba(198, 40, 40, 0.11);
-  --danger-a35: rgba(198, 40, 40, 0.30);
-  --danger-a60: rgba(198, 40, 40, 0.55);
-
-  --success: #15803d;
-  --success-a15: rgba(21, 128, 61, 0.12);
-  --success-a40: rgba(21, 128, 61, 0.35);
-
-  --avatar-bg: #2f6b3a;
-  --avatar-bg-dark: #245229;
-  --avatar-text: #eef6e9;
-
-  --modal-from: #fffdf6;
-  --modal-to: #f2ecd9;
-
-  --shadow: 0 4px 16px rgba(60, 52, 24, 0.14);
-  --shadow-lg: 0 10px 25px rgba(60, 52, 24, 0.20);
-}
-
-:root {
-  color-scheme: dark;
-}
-:root.light {
-  color-scheme: light;
 }
 
 html, body {
@@ -259,7 +191,7 @@ input, textarea { user-select: text; }
   87%      { transform: translate(-3%, -4%) rotate(-5deg); }
 }
 .dice.rolling {
-  animation: dice-roll .45s ease-in-out infinite;
+  animation: dice-roll .45s ease-in-out;
   pointer-events: none;
   transform-origin: center center;
 }
