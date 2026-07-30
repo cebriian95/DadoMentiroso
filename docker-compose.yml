@@ -1,0 +1,18 @@
+services:
+  backend:
+    image: cebriian95/dado-mentiroso-api_arm:latest
+    container_name: dado-mentiroso-api
+    ports:
+      - "5253:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+    restart: always
+
+  frontend:
+    image: cebriian95/dado-mentiroso-frontend_arm:latest
+    container_name: dado-mentiroso-web
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    restart: always
