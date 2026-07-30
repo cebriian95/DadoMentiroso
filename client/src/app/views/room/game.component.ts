@@ -198,6 +198,10 @@ export class GameComponent {
     return this.game.getPlayerColor(playerId);
   }
 
+  protected sortMyDice() {
+    this.game.myDice.update(d => [...d].sort((a, b) => a - b));
+  }
+
   protected async doLeave() {
     this.confirmLeave.set(false);
     await this.game.leaveRoom();

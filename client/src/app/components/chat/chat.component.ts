@@ -22,7 +22,7 @@ import { UserService } from '../../services/user.service';
         }
       </div>
       <form (ngSubmit)="send()" class="flex gap-2 border-t border-border-a10 p-2">
-        <input [(ngModel)]="draft" name="chatDraft" maxlength="200" autocomplete="off"
+        <input [(ngModel)]="draft" name="chatDraft"                maxlength="50" autocomplete="off"
                placeholder="Escribe un mensaje…"
                class="min-w-0 flex-1 rounded-xl border border-border-a10 bg-surface-a5 px-3 py-2 text-sm text-primary placeholder:text-muted outline-none focus:border-accent/50" />
         <button type="submit" [disabled]="!draft.trim()"

@@ -209,7 +209,7 @@ public sealed class GameHub : Hub
     {
         if (!TryGetContext(out var room, out var player)) return Task.CompletedTask;
         var text = (message ?? "").Trim();
-        if (text.Length is < 1 or > 200) return Task.CompletedTask;
+        if (text.Length is < 1 or > 50) return Task.CompletedTask;
         lock (room.Lock)
         {
             _rooms.Touch(room);

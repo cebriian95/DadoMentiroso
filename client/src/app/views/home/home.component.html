@@ -17,7 +17,7 @@
   <div class="w-full">
     <label for="username" class="mb-1.5 block text-xs uppercase tracking-[1px] text-secondary">Tu nombre</label>
     <input id="username" [ngModel]="user.username()" (ngModelChange)="onUsernameInput($event)"
-           maxlength="16" autocomplete="off" placeholder="Ej: jorge56"
+           maxlength="16" autocomplete="off" placeholder="Nombre"
            class="w-full rounded-2xl border border-border-a15 bg-surface-a5 px-4 py-3.5 text-lg font-bold text-primary placeholder:font-normal placeholder:text-muted outline-none transition focus:border-accent/60 focus:bg-surface-a10" />
   </div>
 
@@ -48,7 +48,7 @@
     <div class="banner-in flex w-full flex-col gap-4">
       <div>
         <label for="roomName" class="mb-1.5 block text-xs uppercase tracking-[1px] text-secondary">Nombre de la sala</label>
-        <input id="roomName" [(ngModel)]="roomName" maxlength="30" autocomplete="off" placeholder="Ej: La timba de los jueves"
+        <input id="roomName" [(ngModel)]="roomName" maxlength="30" autocomplete="off" placeholder="Nombre de la sala"
                class="w-full rounded-2xl border border-border-a15 bg-surface-a5 px-4 py-3 text-base font-semibold text-primary placeholder:font-normal placeholder:text-muted outline-none transition focus:border-accent/60 focus:bg-surface-a10" />
       </div>
 

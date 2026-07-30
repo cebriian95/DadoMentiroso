@@ -164,6 +164,7 @@
                         [animationDelay]="($index * 0.06) + 's'" />
             }
           </div>
+          <button (click)="sortMyDice()" class="mt-0.5 self-center rounded-lg border border-border-a10 bg-surface-a5 px-3 py-1.5 text-[10px] text-muted transition active:bg-surface-a15">Ordenar ↑</button>
         }
       </div>
 
@@ -199,8 +200,7 @@
                   <div class="flex items-end justify-center gap-4">
                     <app-bet-wheel label="Nº de dados" [options]="qtyOptions()" [(value)]="betQty" [disabledOptions]="qtyDisabled()" [width]="104" />
                     <app-bet-wheel label="Valor" [options]="valueOptions" [(value)]="betValue" [disabledOptions]="valueDisabled()" [asDice]="true" [width]="72" />
-                  </div>
-                }
+          </div>
                 <div class="grid w-full max-w-[420px] gap-2" [class.grid-cols-3]="!noRaisePossible()" [class.grid-cols-2]="noRaisePossible()">
                   @if (!noRaisePossible()) {
                     <button (click)="placeBet()" [disabled]="!betValid()" class="rounded-2xl bg-gradient-to-br from-accent-light to-accent-dark py-3.5 text-base font-extrabold text-accent-text shadow-[var(--shadow-lg)] transition active:scale-95 disabled:opacity-40">Apostar</button>
@@ -209,6 +209,7 @@
                   <button (click)="exact()" [disabled]="!currentBet()" class="rounded-2xl border border-success-a40 bg-success-a15 py-3.5 text-base font-extrabold uppercase text-success transition active:scale-95 disabled:opacity-30">¡Exacto!</button>
                 </div>
               }
+            }
             </div>
           }
         }
@@ -245,8 +246,9 @@
                 <span class="text-xs text-muted">dice</span>
                 <span class="text-lg font-black text-accent ml-auto">{{ bet.quantity }}×</span>
                 <app-dice [value]="bet.value" size="xs" />
-              </div>
-            }
+          </div>
+          <button (click)="sortMyDice()" class="mt-1 self-center rounded-lg border border-border-a10 bg-surface-a5 px-3 py-1 text-[10px] text-muted transition active:bg-surface-a15">Ordenar ↑</button>
+        }
           </div>
         </div>
       }
