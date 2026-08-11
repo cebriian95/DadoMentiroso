@@ -14,6 +14,7 @@ public sealed class Player
     public bool IsDisconnected { get; set; }
     public DateTimeOffset? DisconnectedAt { get; set; }
     public int ColorIndex { get; set; }
+    public bool PendingJoin { get; set; }
 }
 
 public sealed class Bet
@@ -53,9 +54,9 @@ public sealed class Room
 
 // ---- DTOs (contrato con el cliente) ----
 
-public sealed record PlayerDto(string Id, string Name, int DiceCount, bool IsHost, bool IsSpectator, bool IsDisconnected, int Wins, int ColorIndex);
+public sealed record PlayerDto(string Id, string Name, int DiceCount, bool IsHost, bool IsSpectator, bool IsDisconnected, int Wins, int ColorIndex, bool PendingJoin);
 public sealed record BetDto(string PlayerId, string PlayerName, int Quantity, int Value);
-public sealed record GameDto(string Phase, BetDto? CurrentBet, string? CurrentTurnPlayerId, int RoundNumber, int TotalDiceInPlay, DateTimeOffset? PhaseEndsAt, DateTimeOffset? TurnEndsAt);
+public sealed record GameDto(string Phase, BetDto? CurrentBet, string? CurrentTurnPlayerId, int RoundNumber, int TotalDiceInPlay, DateTimeOffset? PhaseEndsAt, DateTimeOffset? TurnEndsAt, List<string> TurnOrder);
 public sealed record RoomDto(string Id, string Name, bool IsPrivate, string HostId, int DicePerPlayer, string Status, List<PlayerDto> Players, GameDto? Game);
 public sealed record PublicRoomDto(string Id, string Name, int PlayerCount, int MaxPlayers);
 public sealed record RevealPlayerDto(string PlayerId, string PlayerName, int[] Dice);

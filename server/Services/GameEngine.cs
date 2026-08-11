@@ -33,7 +33,7 @@ public sealed class GameEngine
     {
         var players = room.Players.Select(p => new PlayerDto(
             p.Id, p.Name, p.IsSpectator ? 0 : p.Dice.Count,
-            p.Id == room.HostId, p.IsSpectator, p.IsDisconnected, p.Wins, p.ColorIndex)).ToList();
+            p.Id == room.HostId, p.IsSpectator, p.IsDisconnected, p.Wins, p.ColorIndex, p.PendingJoin)).ToList();
 
         GameDto? game = null;
         if (room.Status == RoomStatus.InGame && room.Phase is { } phase)
@@ -45,7 +45,7 @@ public sealed class GameEngine
                 ? room.TurnOrder[room.CurrentTurnIndex % room.TurnOrder.Count]
                 : null;
             var totalDice = room.Players.Where(p => !p.IsSpectator).Sum(p => p.Dice.Count);
-            game = new GameDto(phase.ToString(), bet, turn, room.RoundNumber, totalDice, room.PhaseEndsAt, room.TurnEndsAt);
+            game = new GameDto(phase.ToString(), bet, turn, room.RoundNumber, totalDice, room.PhaseEndsAt, room.TurnEndsAt, room.TurnOrder.ToList());
         }
 
         return new RoomDto(room.Id, room.Name, room.Password is not null, room.HostId,
@@ -123,6 +123,7 @@ public sealed class GameEngine
             foreach (var p in room.Players)
             {
                 p.IsSpectator = false;
+                p.PendingJoin = false;
                 p.Dice = Enumerable.Range(0, room.DicePerPlayer).Select(_ => Roll()).ToList();
             }
 
@@ -143,6 +144,25 @@ public sealed class GameEngine
         room.TurnEndsAt = null;
         room.PhaseEndsAt = DateTimeOffset.UtcNow + RollingDuration;
 
+        var pending = room.Players.Where(p => p.PendingJoin).ToList();
+        if (pending.Count > 0)
+        {
+            var activeDice = room.Players
+                .Where(p => !p.IsSpectator && !p.PendingJoin)
+                .Select(p => p.Dice.Count)
+                .ToList();
+            var averageDice = activeDice.Count == 0
+                ? room.DicePerPlayer
+                : Math.Max(1, (int)Math.Round(activeDice.Average(), MidpointRounding.AwayFromZero));
+
+            foreach (var p in pending)
+            {
+                p.PendingJoin = false;
+                p.IsSpectator = false;
+                p.Dice = Enumerable.Range(0, averageDice).Select(_ => Roll()).ToList();
+            }
+        }
+
         var active = room.Players.Where(p => !p.IsSpectator).ToList();
         room.TurnOrder = active.Select(p => p.Id).ToList();
         foreach (var p in active)
@@ -158,6 +178,14 @@ public sealed class GameEngine
         BroadcastRoomLocked(room);
         SendPrivateDiceLocked(room);
         Schedule(room, RollingDuration, () => BeginBetting(room));
+    }
+
+    /// <summary>Marca a un jugador nuevo para entrar al comenzar la siguiente ronda.</summary>
+    public void MarkPendingJoinLocked(Room room, Player player)
+    {
+        player.IsSpectator = true;
+        player.PendingJoin = true;
+        player.Dice.Clear();
     }
 
     public void MarkRolled(Room room, string playerId)
@@ -280,7 +308,7 @@ public sealed class GameEngine
         }
     }
 
-    /// <summary>Resuelve Mentira/Exacto: revela dados, descuenta dados y programa la siguiente ronda. Lock adquirido.</summary>
+    /// <summary>Resuelve Mentira/Exacto: revela primero y aplica la pérdida al terminar el revelado.</summary>
     private void ResolveLocked(Room room, string callerId, bool isExact)
     {
         room.PhaseToken++;
@@ -305,30 +333,23 @@ public sealed class GameEngine
             losers = [callerId];
         }
 
-        foreach (var id in losers)
-        {
-            var p = room.Players.FirstOrDefault(x => x.Id == id);
-            if (p is null) continue;
-            if (p.Dice.Count > 0) p.Dice.RemoveAt(p.Dice.Count - 1);
-            if (p.Dice.Count == 0) p.IsSpectator = true;
-        }
-
         room.Phase = GamePhase.Revealing;
         room.PhaseEndsAt = DateTimeOffset.UtcNow + RevealDuration;
         room.TurnEndsAt = null;
 
-        // Quien empieza la siguiente ronda.
-        string starterId = resolution switch
+        // Proyectamos la pérdida para decidir el ganador sin mutar todavía los dados.
+        var projectedActive = room.Players
+            .Where(p => !p.IsSpectator && p.Dice.Count - (losers.Contains(p.Id) ? 1 : 0) > 0)
+            .ToList();
+        var winner = projectedActive.Count == 1 ? projectedActive[0] : null;
+
+        // Quien empezará la siguiente ronda, validándolo de nuevo al terminar el revelado.
+        string starterCandidate = resolution switch
         {
             "doubt" => losers[0],                       // pierde un dado y empieza él
             "exact-miss" => callerId,                   // pierde un dado y empieza él
             _ => NextActiveAfter(room, callerId) ?? callerId, // exact-hit: el siguiente al que dijo Exacto
         };
-        if (room.Players.FirstOrDefault(p => p.Id == starterId)?.IsSpectator != false)
-            starterId = NextActiveAfter(room, starterId) ?? room.TurnOrder.FirstOrDefault() ?? callerId;
-
-        var active = room.Players.Where(p => !p.IsSpectator).ToList();
-        var winner = active.Count == 1 ? active[0] : null;
 
         var revealDto = new RevealDto(
             resolution,
@@ -345,8 +366,42 @@ public sealed class GameEngine
 
         Schedule(room, RevealDuration, () =>
         {
-            if (winner is not null) EndGameLocked(room, winner);
-            else StartRoundLocked(room, starterId);
+            foreach (var id in losers)
+            {
+                var p = room.Players.FirstOrDefault(x => x.Id == id);
+                if (p is null) continue;
+                if (p.Dice.Count > 0) p.Dice.RemoveAt(p.Dice.Count - 1);
+                if (p.Dice.Count == 0) p.IsSpectator = true;
+            }
+
+            var activeNow = room.Players.Where(p => !p.IsSpectator).ToList();
+            var validWinner = winner is not null && activeNow.Any(p => p.Id == winner.Id)
+                ? activeNow.First(p => p.Id == winner.Id)
+                : activeNow.Count == 1 ? activeNow[0] : null;
+
+            if (validWinner is not null)
+            {
+                EndGameLocked(room, validWinner);
+                return;
+            }
+
+            if (activeNow.Count == 0)
+            {
+                room.PhaseToken++;
+                room.Status = RoomStatus.Lobby;
+                room.Phase = null;
+                room.CurrentBet = null;
+                room.PhaseEndsAt = null;
+                room.TurnEndsAt = null;
+                room.TurnOrder = [];
+                BroadcastRoomLocked(room);
+                return;
+            }
+
+            var starterId = starterCandidate;
+            if (room.Players.FirstOrDefault(p => p.Id == starterId)?.IsSpectator != false)
+                starterId = NextActiveAfter(room, starterId) ?? activeNow[0].Id;
+            StartRoundLocked(room, starterId);
         });
     }
 
@@ -405,7 +460,7 @@ public sealed class GameEngine
         if (room.HostId == playerId)
             room.HostId = room.Players[0].Id;
 
-        if (room.Status == RoomStatus.InGame)
+        if (room.Status == RoomStatus.InGame && room.Phase != GamePhase.Revealing)
         {
             var active = room.Players.Where(p => !p.IsSpectator).ToList();
             if (active.Count == 1)

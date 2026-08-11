@@ -18,7 +18,7 @@ Juego de dados y faroles para **2-12 jugadores** (Perudo / Liar's Dice), online,
 - **Crear sala:** nombre de sala (1-30 caracteres), visibilidad pública o privada. Si es privada, contraseña obligatoria de **3 a 20 caracteres**. Al crearla se genera un **código único de 5 caracteres** (alfabeto sin caracteres ambiguos: sin 0/O, 1/I/L).
 - **Unirse a sala privada:** nombre de usuario + código de sala + contraseña.
 - **Salas públicas:** lista en vivo de salas que están en **sala de preparación** (no en mitad de una partida). Unirse no requiere contraseña.
-- Quien se une a una sala (por código) **en mitad de una partida** entra como **espectador** hasta la siguiente partida.
+- Quien se une a una sala (por código) **en mitad de una partida** queda pendiente y entra al comenzar la siguiente ronda con la media redondeada de los dados de los jugadores activos (mínimo 1 dado).
 - Las salas se **borran automáticamente tras 5 horas de inactividad**.
 - Capacidad máxima: **12 jugadores** por sala.
 
@@ -30,6 +30,7 @@ Juego de dados y faroles para **2-12 jugadores** (Perudo / Liar's Dice), online,
   - **Expulsar** a cualquier jugador (con confirmación).
   - **Iniciar la partida** (mínimo 2 jugadores).
   - **Borrar la sala**: todos los jugadores vuelven a la pantalla de inicio.
+- Durante una partida, el host puede expulsar jugadores manteniendo pulsado su recuadro y confirmando la acción.
 - Cualquier jugador puede salir de la sala.
 - Hay **chat de texto** (también durante la partida; los espectadores pueden chatear).
 - Junto a cada nombre se muestran sus **victorias** (un punto por partida ganada en esta sala).
@@ -80,6 +81,7 @@ Se revelan los dados de todos:
 ### Fin de ronda
 
 - Tras cada resolución hay unos segundos de revelado (8s) mostrando los dados de todos y el resultado, y comienza una nueva ronda (fase 1).
+- Durante el revelado se muestran los dados completos de la ronda; la pérdida se aplica al terminar el revelado, antes de la siguiente ronda.
 - Quien se queda **con 0 dados** pasa a **espectador**: sale de la mesa, no participa en las apuestas, pero permanece en la sala y puede usar el chat.
 
 ### Fin de partida

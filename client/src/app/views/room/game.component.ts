@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, DestroyRef, computed, effect, injec
 import { Router } from '@angular/router';
 import { ChatComponent } from '../../components/chat/chat.component';
 import { ConfirmModalComponent } from '../../components/confirm-modal/confirm-modal.component';
+import { RulesModalComponent } from '../../components/rules-modal/rules-modal.component';
 import { BetWheelComponent } from '../../components/bet-wheel/bet-wheel.component';
 import { DiceComponent } from '../../components/dice/dice.component';
 import { GameService } from '../../services/game.service';
@@ -12,7 +13,7 @@ const ROLL_ANIMATION_MS = 500;
 @Component({
   selector: 'app-game',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ChatComponent, ConfirmModalComponent, BetWheelComponent, DiceComponent],
+  imports: [ChatComponent, ConfirmModalComponent, RulesModalComponent, BetWheelComponent, DiceComponent],
   templateUrl: './game.component.html',
 })
 export class GameComponent {
@@ -26,9 +27,18 @@ export class GameComponent {
   protected readonly phase = computed(() => this.gameState()?.phase ?? null);
 
   protected readonly myPlayer = computed(() => this.room()?.players.find(p => p.id === this.user.playerId) ?? null);
+  protected readonly isHost = computed(() => this.room()?.hostId === this.user.playerId);
   protected readonly amSpectator = computed(() => this.myPlayer()?.isSpectator ?? false);
-  protected readonly opponents = computed(() => this.room()?.players.filter(p => p.id !== this.user.playerId) ?? []);
-  protected readonly activeOpponents = computed(() => this.opponents().filter(p => !p.isSpectator));
+  protected readonly amPending = computed(() => this.myPlayer()?.pendingJoin ?? false);
+  protected readonly turnPlayers = computed(() => {
+    const room = this.room();
+    const game = this.gameState();
+    if (!room) return [];
+    const active = room.players.filter(p => !p.isSpectator);
+    if (!game?.turnOrder?.length) return active;
+    const byId = new Map(active.map(player => [player.id, player]));
+    return game.turnOrder.map(id => byId.get(id)).filter((player): player is NonNullable<typeof player> => !!player);
+  });
   protected readonly spectators = computed(() => this.room()?.players.filter(p => p.isSpectator) ?? []);
 
   protected readonly isMyTurn = computed(() =>
@@ -136,6 +146,9 @@ export class GameComponent {
   });
 
   protected readonly confirmLeave = signal(false);
+  protected readonly rulesOpen = signal(false);
+  protected readonly kickTarget = signal<{ id: string; name: string } | null>(null);
+  private pressTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
     const timer = setInterval(() => this.now.set(Date.now()), 250);
@@ -196,6 +209,28 @@ export class GameComponent {
 
   protected getPlayerNameColor(playerId: string): string {
     return this.game.getPlayerColor(playerId);
+  }
+
+  protected startPlayerPress(playerId: string, playerName: string) {
+    if (!this.isHost() || playerId === this.user.playerId) return;
+    this.cancelPlayerPress();
+    this.pressTimer = setTimeout(() => {
+      this.pressTimer = null;
+      this.kickTarget.set({ id: playerId, name: playerName });
+    }, 500);
+  }
+
+  protected cancelPlayerPress() {
+    if (this.pressTimer !== null) {
+      clearTimeout(this.pressTimer);
+      this.pressTimer = null;
+    }
+  }
+
+  protected confirmKick() {
+    const target = this.kickTarget();
+    this.kickTarget.set(null);
+    if (target) void this.game.kickPlayer(target.id);
   }
 
   protected sortMyDice() {

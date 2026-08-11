@@ -9,6 +9,7 @@ export interface PlayerDto {
   isDisconnected: boolean;
   wins: number;
   colorIndex: number;
+  pendingJoin: boolean;
 }
 
 export interface BetDto {
@@ -28,6 +29,7 @@ export interface GameDto {
   totalDiceInPlay: number;
   phaseEndsAt: string | null;
   turnEndsAt: string | null;
+  turnOrder: string[];
 }
 
 export interface RoomDto {

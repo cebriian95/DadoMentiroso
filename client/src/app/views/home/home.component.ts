@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { RulesModalComponent } from '../../components/rules-modal/rules-modal.component';
 import { GameService } from '../../services/game.service';
 import { UserService } from '../../services/user.service';
 
@@ -10,7 +11,7 @@ type Tab = 'create' | 'join' | 'public';
 @Component({
   selector: 'app-home',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule],
+  imports: [FormsModule, RulesModalComponent],
   templateUrl: './home.component.html',
 })
 export class HomeComponent implements OnInit, OnDestroy {
@@ -21,6 +22,7 @@ export class HomeComponent implements OnInit, OnDestroy {
   protected tab = signal<Tab>('create');
   protected busy = signal(false);
   protected sessionNotice = signal<string | null>(null);
+  protected rulesOpen = signal(false);
 
   // Crear sala (signals para que los computed reaccionen con OnPush)
   protected roomName = signal('');
@@ -41,6 +43,9 @@ export class HomeComponent implements OnInit, OnDestroy {
     if (ended === 'kicked') this.sessionNotice.set('El host te ha expulsado de la sala');
     if (ended === 'deleted') this.sessionNotice.set('La sala ha sido eliminada');
     this.game.clearSessionEnded();
+    if (!localStorage.getItem('dmRulesSeen')) {
+      this.rulesOpen.set(true);
+    }
     void this.autoReconnect();
     void this.game.watchPublicRooms();
   }
@@ -86,6 +91,11 @@ export class HomeComponent implements OnInit, OnDestroy {
   protected async joinPublic(code: string) {
     if (!this.usernameOk() || this.busy()) return;
     await this.doJoin(code, null);
+  }
+
+  protected onRulesClosed(open: boolean) {
+    this.rulesOpen.set(open);
+    if (!open) localStorage.setItem('dmRulesSeen', '1');
   }
 
   private async doJoin(code: string, password: string | null) {

@@ -3,10 +3,18 @@
 
     <!-- Rivales: panel desktop -->
     <aside class="hidden min-h-0 flex-col gap-3 overflow-hidden rounded-2xl border border-border-a10 bg-panel p-3 lg:flex">
-      <h3 class="text-xs uppercase tracking-[1px] text-secondary">Rivales</h3>
+        <div class="flex items-center justify-between gap-2">
+          <h3 class="text-xs uppercase tracking-[1px] text-secondary">Orden de turno</h3>
+          @if (isHost()) { <span class="text-[9px] uppercase tracking-wide text-muted">Mantén pulsado para expulsar</span> }
+        </div>
       <div class="flex flex-1 flex-col gap-2 overflow-y-auto">
-        @for (p of activeOpponents(); track p.id) {
-          <div class="relative flex items-center gap-2 rounded-xl border px-2 py-2 transition"
+        @for (p of turnPlayers(); track p.id; let position = $index) {
+          <div class="relative flex select-none items-center gap-2 rounded-xl border px-2 py-2 transition"
+               (pointerdown)="startPlayerPress(p.id, p.name)"
+               (pointerup)="cancelPlayerPress()"
+               (pointerleave)="cancelPlayerPress()"
+               (pointercancel)="cancelPlayerPress()"
+               (contextmenu)="$event.preventDefault()"
                [class.border-accent/60]="gameState()?.currentTurnPlayerId === p.id && phase() === 'Betting'"
                [class.bg-accent/5]="gameState()?.currentTurnPlayerId === p.id && phase() === 'Betting'"
                [class.turn-ring]="gameState()?.currentTurnPlayerId === p.id && phase() === 'Betting'"
@@ -17,9 +25,11 @@
                  [style.background]="game.getPlayerColor(p.id)">
               {{ p.name.charAt(0).toUpperCase() }}
             </div>
-            <div class="min-w-0 flex-1">
-              <p class="truncate text-xs font-bold" [style.color]="game.getPlayerColor(p.id)">{{ p.name }}</p>
-              <p class="text-[10px] text-secondary">{{ p.diceCount }} dados</p>
+             <span class="w-4 text-center text-[10px] font-black text-muted">{{ position + 1 }}</span>
+             <div class="min-w-0 flex-1">
+               <p class="truncate text-xs font-bold" [style.color]="game.getPlayerColor(p.id)">{{ p.name }}</p>
+               @if (p.id === user.playerId) { <span class="text-[9px] uppercase text-accent">(tú)</span> }
+               <p class="text-[10px] text-secondary">{{ p.diceCount }} dados</p>
             </div>
           </div>
         }
@@ -28,7 +38,12 @@
         <div class="flex flex-wrap gap-1.5 border-t border-border-a10 pt-2">
           <span class="text-[10px] uppercase tracking-[1px] text-muted">Espectadores:</span>
           @for (p of spectators(); track p.id) {
-            <span class="rounded-full bg-surface-a5 px-2 py-0.5 text-[10px] text-secondary">{{ p.name }}</span>
+            <span class="select-none rounded-full bg-surface-a5 px-2 py-0.5 text-[10px] text-secondary"
+                  (pointerdown)="startPlayerPress(p.id, p.name)"
+                  (pointerup)="cancelPlayerPress()"
+                  (pointerleave)="cancelPlayerPress()"
+                  (pointercancel)="cancelPlayerPress()"
+                  (contextmenu)="$event.preventDefault()">{{ p.name }}</span>
           }
         </div>
       }
@@ -44,6 +59,7 @@
           <p class="whitespace-nowrap text-[11px] uppercase tracking-[1px] text-secondary">Ronda {{ gameState()?.roundNumber ?? 1 }} · {{ gameState()?.totalDiceInPlay ?? 0 }} dados</p>
         </div>
         <div class="flex shrink-0 items-center gap-2">
+          <button (click)="rulesOpen.set(true)" class="rounded-xl border border-border-a15 bg-surface-a5 px-3 py-2 text-sm font-bold text-secondary transition active:bg-surface-a15">Reglas</button>
           <button (click)="toggleChat()" class="relative rounded-xl border border-border-a15 bg-surface-a5 px-3 py-2 text-sm font-bold text-primary transition active:bg-surface-a15 lg:hidden">
             Chat
             @if (unread() > 0) {
@@ -56,20 +72,26 @@
 
       <!-- Rivales móvil -->
       <div class="flex gap-2 overflow-x-auto px-3 pb-1 pt-2 lg:hidden">
-        @for (p of activeOpponents(); track p.id) {
-          <div class="relative shrink-0 items-center gap-2 rounded-2xl border px-2.5 py-1.5 transition"
+        @for (p of turnPlayers(); track p.id; let position = $index) {
+          <div class="relative flex shrink-0 select-none items-center gap-2 rounded-2xl border px-2.5 py-1.5 transition"
+               (pointerdown)="startPlayerPress(p.id, p.name)"
+               (pointerup)="cancelPlayerPress()"
+               (pointerleave)="cancelPlayerPress()"
+               (pointercancel)="cancelPlayerPress()"
+               (contextmenu)="$event.preventDefault()"
                [class.border-accent/60]="gameState()?.currentTurnPlayerId === p.id && phase() === 'Betting'"
                [class.bg-accent/5]="gameState()?.currentTurnPlayerId === p.id && phase() === 'Betting'"
                [class.turn-ring]="gameState()?.currentTurnPlayerId === p.id && phase() === 'Betting'"
                [class.border-border-a10]="!(gameState()?.currentTurnPlayerId === p.id && phase() === 'Betting')"
                [class.bg-surface-a5]="!(gameState()?.currentTurnPlayerId === p.id && phase() === 'Betting')"
                [class.opacity-40]="p.isDisconnected">
-            <div class="flex h-7 w-7 items-center justify-center rounded-full text-xs font-black text-white shadow-sm"
+             <span class="text-[10px] font-black text-muted">{{ position + 1 }}</span>
+             <div class="flex h-7 w-7 items-center justify-center rounded-full text-xs font-black text-white shadow-sm"
                  [style.background]="game.getPlayerColor(p.id)">
               {{ p.name.charAt(0).toUpperCase() }}
             </div>
             <div class="flex flex-col leading-tight">
-              <span class="max-w-[72px] truncate text-[11px] font-bold" [style.color]="game.getPlayerColor(p.id)">{{ p.name }}</span>
+               <span class="max-w-[72px] truncate text-[11px] font-bold" [style.color]="game.getPlayerColor(p.id)">{{ p.name }} @if (p.id === user.playerId) { <span class="text-accent">(tú)</span> }</span>
               <span class="text-[10px] text-secondary">{{ p.diceCount }} dados</span>
             </div>
             @if (p.isDisconnected) { <span class="text-[9px] uppercase text-muted">off</span> }
@@ -81,7 +103,12 @@
         <div class="flex flex-wrap items-center gap-1.5 px-3 pb-1 lg:hidden">
           <span class="text-[10px] uppercase tracking-[1px] text-muted">Espectadores:</span>
           @for (p of spectators(); track p.id) {
-            <span class="rounded-full bg-surface-a5 px-2 py-0.5 text-[10px] text-secondary">{{ p.name }}</span>
+            <span class="select-none rounded-full bg-surface-a5 px-2 py-0.5 text-[10px] text-secondary"
+                  (pointerdown)="startPlayerPress(p.id, p.name)"
+                  (pointerup)="cancelPlayerPress()"
+                  (pointerleave)="cancelPlayerPress()"
+                  (pointercancel)="cancelPlayerPress()"
+                  (contextmenu)="$event.preventDefault()">{{ p.name }}</span>
           }
         </div>
       }
@@ -152,8 +179,8 @@
           </div>
         } @else if (amSpectator()) {
           <div class="rounded-2xl border border-border-a10 bg-panel px-6 py-4 text-center">
-            <p class="text-lg font-black uppercase tracking-widest text-secondary">Te has quedado sin dados</p>
-            <p class="mt-1 text-sm text-secondary">Eres espectador. Puedes seguir el chat de la partida.</p>
+             <p class="text-lg font-black uppercase tracking-widest text-secondary">{{ amPending() ? 'Entrarás en la próxima ronda' : 'Te has quedado sin dados' }}</p>
+             <p class="mt-1 text-sm text-secondary">{{ amPending() ? 'El host te ha incorporado a la sala.' : 'Eres espectador. Puedes seguir el chat de la partida.' }}</p>
           </div>
         } @else {
           <span class="text-xs uppercase tracking-[1px] text-secondary">Tus dados ({{ myPlayer()?.diceCount ?? 0 }})</span>
@@ -247,8 +274,7 @@
                 <span class="text-lg font-black text-accent ml-auto">{{ bet.quantity }}×</span>
                 <app-dice [value]="bet.value" size="xs" />
           </div>
-          <button (click)="sortMyDice()" class="mt-1 self-center rounded-lg border border-border-a10 bg-surface-a5 px-3 py-1 text-[10px] text-muted transition active:bg-surface-a15">Ordenar ↑</button>
-        }
+         }
           </div>
         </div>
       }
@@ -257,6 +283,11 @@
       @if (confirmLeave()) {
         <app-confirm-modal title="Salir de la partida" message="Perderás tus dados y quedarás fuera de la sala. ¿Seguro?" confirmLabel="Salir" [danger]="true" (confirmed)="doLeave()" (cancelled)="confirmLeave.set(false)" />
       }
+      @if (kickTarget(); as target) {
+        <app-confirm-modal title="Expulsar jugador" [message]="'¿Expulsar a ' + target.name + ' de la partida?'"
+                           confirmLabel="Expulsar" [danger]="true"
+                           (confirmed)="confirmKick()" (cancelled)="kickTarget.set(null)" />
+      }
     </main>
 
     <!-- Chat desktop -->
@@ -264,5 +295,6 @@
       <div class="border-b border-border-a10 px-3 py-2 text-xs uppercase tracking-[1px] text-secondary">Chat</div>
       <div class="min-h-0 flex-1"><app-chat class="h-full" /></div>
     </aside>
+    <app-rules-modal [(open)]="rulesOpen" />
   </div>
 }

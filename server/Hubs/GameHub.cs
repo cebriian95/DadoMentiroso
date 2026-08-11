@@ -86,9 +86,10 @@ public sealed class GameHub : Hub
                     Id = req.PlayerId,
                     Name = playerName,
                     ConnectionId = Context.ConnectionId,
-                    IsSpectator = room.Status == RoomStatus.InGame, // se une a mitad de partida: espectador
                     ColorIndex = AssignColor(room)
                 };
+                if (room.Status == RoomStatus.InGame)
+                    _engine.MarkPendingJoinLocked(room, player);
                 room.Players.Add(player);
             }
 

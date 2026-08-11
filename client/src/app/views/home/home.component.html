@@ -136,4 +136,6 @@
   }
 
   <p class="text-xs text-muted">El juego del farol: apuesta, miente y sobrevive con dados.</p>
+
+  <app-rules-modal [open]="rulesOpen()" (openChange)="onRulesClosed($event)" />
 </div>
