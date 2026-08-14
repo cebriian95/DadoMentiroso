@@ -15,6 +15,7 @@ public sealed class Player
     public DateTimeOffset? DisconnectedAt { get; set; }
     public int ColorIndex { get; set; }
     public bool PendingJoin { get; set; }
+    public required string ReconnectToken { get; init; }
 }
 
 public sealed class Bet
@@ -50,18 +51,21 @@ public sealed class Room
     public DateTimeOffset? PhaseEndsAt { get; set; }
     public DateTimeOffset? TurnEndsAt { get; set; }
     public HashSet<string> RolledPlayers { get; } = [];
+    public List<Bet> RoundBets { get; } = [];
+    public bool Removed { get; set; }
 }
 
 // ---- DTOs (contrato con el cliente) ----
 
 public sealed record PlayerDto(string Id, string Name, int DiceCount, bool IsHost, bool IsSpectator, bool IsDisconnected, int Wins, int ColorIndex, bool PendingJoin);
 public sealed record BetDto(string PlayerId, string PlayerName, int Quantity, int Value);
-public sealed record GameDto(string Phase, BetDto? CurrentBet, string? CurrentTurnPlayerId, int RoundNumber, int TotalDiceInPlay, DateTimeOffset? PhaseEndsAt, DateTimeOffset? TurnEndsAt, List<string> TurnOrder);
+public sealed record GameDto(string Phase, BetDto? CurrentBet, string? CurrentTurnPlayerId, int RoundNumber, int TotalDiceInPlay, DateTimeOffset? PhaseEndsAt, DateTimeOffset? TurnEndsAt, List<string> TurnOrder, List<BetDto> RoundBets);
 public sealed record RoomDto(string Id, string Name, bool IsPrivate, string HostId, int DicePerPlayer, string Status, List<PlayerDto> Players, GameDto? Game);
-public sealed record PublicRoomDto(string Id, string Name, int PlayerCount, int MaxPlayers);
+public sealed record PublicRoomDto(string Id, string Name, int PlayerCount, int MaxPlayers, string Status);
 public sealed record RevealPlayerDto(string PlayerId, string PlayerName, int[] Dice);
 public sealed record RevealDto(string Resolution, BetDto Bet, int ActualCount, List<string> LoserIds, List<RevealPlayerDto> Players, string? WinnerId, string? WinnerName);
 public sealed record ChatMessageDto(string PlayerId, string PlayerName, string Text, DateTimeOffset At);
 
 public sealed record CreateRoomRequest(string PlayerId, string PlayerName, string RoomName, bool IsPrivate, string? Password);
-public sealed record JoinRoomRequest(string PlayerId, string PlayerName, string RoomCode, string? Password);
+public sealed record JoinRoomRequest(string PlayerId, string PlayerName, string RoomCode, string? Password, string? ReconnectToken = null);
+public sealed record RoomJoinResponse(RoomDto Room, string ReconnectToken);

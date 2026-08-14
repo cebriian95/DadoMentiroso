@@ -10,7 +10,7 @@ import { GameService } from './services/game.service';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class App {
-  private readonly game = inject(GameService);
+  protected readonly game = inject(GameService);
   protected readonly error = this.game.actionError;
   private dismissTimer: ReturnType<typeof setTimeout> | null = null;
 

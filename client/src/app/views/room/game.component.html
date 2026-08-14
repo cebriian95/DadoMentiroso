@@ -13,8 +13,12 @@
                (pointerdown)="startPlayerPress(p.id, p.name)"
                (pointerup)="cancelPlayerPress()"
                (pointerleave)="cancelPlayerPress()"
-               (pointercancel)="cancelPlayerPress()"
-               (contextmenu)="$event.preventDefault()"
+                (pointercancel)="cancelPlayerPress()"
+                (keydown.enter)="isHost() && p.id !== user.playerId ? kickTarget.set({ id: p.id, name: p.name }) : null"
+                (keydown.space)="$event.preventDefault(); isHost() && p.id !== user.playerId ? kickTarget.set({ id: p.id, name: p.name }) : null"
+                [attr.role]="isHost() && p.id !== user.playerId ? 'button' : null"
+                [attr.tabindex]="isHost() && p.id !== user.playerId ? 0 : null"
+                (contextmenu)="$event.preventDefault()"
                [class.border-accent/60]="gameState()?.currentTurnPlayerId === p.id && phase() === 'Betting'"
                [class.bg-accent/5]="gameState()?.currentTurnPlayerId === p.id && phase() === 'Betting'"
                [class.turn-ring]="gameState()?.currentTurnPlayerId === p.id && phase() === 'Betting'"
@@ -54,9 +58,14 @@
 
       <!-- Cabecera -->
       <div class="flex items-center justify-between gap-2 px-3 pt-3">
-        <div class="min-w-0">
-          <h2 class="truncate text-base font-black tracking-wide text-accent">{{ room.name }}</h2>
-          <p class="whitespace-nowrap text-[11px] uppercase tracking-[1px] text-secondary">Ronda {{ gameState()?.roundNumber ?? 1 }} · {{ gameState()?.totalDiceInPlay ?? 0 }} dados</p>
+         <div class="min-w-0">
+           <button (click)="toggleRoomCode()" class="block max-w-full truncate text-left text-base font-black tracking-wide text-accent transition active:text-accent-light" [attr.aria-expanded]="roomCodeOpen()">
+             {{ room.name }}
+           </button>
+           @if (roomCodeOpen()) {
+             <p class="mt-0.5 text-xs font-black tracking-[3px] text-accent">Código: {{ room.id }}</p>
+           }
+           <p class="whitespace-nowrap text-[11px] uppercase tracking-[1px] text-secondary">Ronda {{ gameState()?.roundNumber ?? 1 }} · {{ gameState()?.totalDiceInPlay ?? 0 }} dados</p>
         </div>
         <div class="flex shrink-0 items-center gap-2">
           <button (click)="rulesOpen.set(true)" class="rounded-xl border border-border-a15 bg-surface-a5 px-3 py-2 text-sm font-bold text-secondary transition active:bg-surface-a15">Reglas</button>
@@ -156,7 +165,7 @@
                      [class.border-border-a10]="!loserPlayers().includes(rp.playerId)"
                      [class.bg-surface-a5]="!loserPlayers().includes(rp.playerId)">
                   @if (loserPlayers().includes(rp.playerId)) {
-                    <div class="absolute -left-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-danger text-[9px] font-black text-primary shadow-lg animate-bounce" title="-1 dado">−1</div>
+                     <div class="absolute -left-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-danger text-[9px] font-black text-primary shadow-lg animate-pulse" title="-1 dado">−1</div>
                   }
                   <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-black text-white shadow-sm"
                        [style.background]="game.getPlayerColor(rp.playerId)">
@@ -186,17 +195,24 @@
           <span class="text-xs uppercase tracking-[1px] text-secondary">Tus dados ({{ myPlayer()?.diceCount ?? 0 }})</span>
           <div class="flex max-w-full flex-wrap items-center justify-center gap-2">
             @for (d of game.myDice(); track $index) {
-              <app-dice [value]="d" [hidden]="phase() === 'Rolling' && !hasRolled() && !rollingNow()"
+              <app-dice [value]="d" [hidden]="diceHidden() || (phase() === 'Rolling' && !hasRolled() && !rollingNow())"
                         [rolling]="rollingNow()"
                         [animationDelay]="($index * 0.06) + 's'" />
             }
           </div>
-          <button (click)="sortMyDice()" class="mt-0.5 self-center rounded-lg border border-border-a10 bg-surface-a5 px-3 py-1.5 text-[10px] text-muted transition active:bg-surface-a15">Ordenar ↑</button>
+          <div class="mt-0.5 flex items-center gap-2">
+            <button (click)="sortMyDice()" class="rounded-lg border border-border-a10 bg-surface-a5 px-3 py-1.5 text-[10px] text-muted transition active:bg-surface-a15">Ordenar ↑</button>
+            <button (click)="toggleDiceVisibility()"
+                    class="rounded-lg border border-border-a10 bg-surface-a5 px-3 py-1.5 text-[10px] text-muted transition active:bg-surface-a15"
+                    [attr.aria-label]="diceHidden() ? 'Mostrar dados' : 'Ocultar dados'">
+              {{ diceHidden() ? 'Mostrar dados' : 'Ocultar dados' }}
+            </button>
+          </div>
         }
       </div>
 
       <!-- Zona de acción -->
-      <div class="shrink-0 px-3 pb-3">
+       <div class="shrink-0 px-3 pb-3 safe-bottom">
         @if (!amSpectator() && !reveal()) {
           @if (phase() === 'Rolling') {
             <div class="flex flex-col items-center gap-1.5">
@@ -246,13 +262,13 @@
       @if (chatOpen()) {
         <div class="fixed inset-0 z-10 bg-black/30 lg:hidden" (click)="toggleChat()"></div>
       }
-      <div class="fixed inset-x-0 bottom-0 z-20 flex h-[70%] flex-col rounded-t-3xl border-t border-border-a15 bg-gradient-to-b from-modal-from to-modal-to shadow-[var(--shadow-lg)] transition-transform duration-300 lg:hidden"
+       <div class="fixed inset-x-0 bottom-0 z-20 flex h-[70%] flex-col rounded-t-3xl border-t border-border-a15 bg-gradient-to-b from-modal-from to-modal-to shadow-[var(--shadow-lg)] transition-transform duration-300 safe-bottom lg:hidden"
            [class.translate-y-full]="!chatOpen()">
         <button (click)="toggleChat()" class="flex shrink-0 items-center justify-between px-4 py-3">
           <span class="text-sm font-bold uppercase tracking-[1px] text-secondary">Chat</span>
           <span class="text-secondary">▾</span>
         </button>
-        <div class="min-h-0 flex-1 border-t border-border-a10"><app-chat class="h-full" /></div>
+         <div class="min-h-0 flex-1 border-t border-border-a10"><app-chat class="h-full" [active]="chatOpen()" /></div>
       </div>
 
       <!-- Modal historial de apuestas -->
@@ -293,7 +309,7 @@
     <!-- Chat desktop -->
     <aside class="hidden min-h-0 flex-col overflow-hidden rounded-2xl border border-border-a10 bg-panel lg:flex">
       <div class="border-b border-border-a10 px-3 py-2 text-xs uppercase tracking-[1px] text-secondary">Chat</div>
-      <div class="min-h-0 flex-1"><app-chat class="h-full" /></div>
+       <div class="min-h-0 flex-1"><app-chat class="h-full" /></div>
     </aside>
     <app-rules-modal [(open)]="rulesOpen" />
   </div>

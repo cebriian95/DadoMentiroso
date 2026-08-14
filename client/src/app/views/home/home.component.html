@@ -31,20 +31,20 @@
   </div>
 
   <!-- Pestañas -->
-  <div class="grid w-full grid-cols-3 gap-1 rounded-2xl border border-border-a10 bg-panel p-1">
-    <button (click)="tab.set('create')"
+  <div class="grid w-full grid-cols-3 gap-1 rounded-2xl border border-border-a10 bg-panel p-1" role="tablist" aria-label="Acciones de sala">
+    <button role="tab" [attr.aria-selected]="tab() === 'create'" (click)="tab.set('create')"
             class="rounded-xl py-2.5 text-sm font-bold transition"
             [class.bg-accent]="tab() === 'create'" [class.text-accent-text]="tab() === 'create'"
             [class.text-secondary]="tab() !== 'create'">
       Crear sala
     </button>
-    <button (click)="tab.set('join')"
+    <button role="tab" [attr.aria-selected]="tab() === 'join'" (click)="tab.set('join')"
             class="rounded-xl py-2.5 text-sm font-bold transition"
             [class.bg-accent]="tab() === 'join'" [class.text-accent-text]="tab() === 'join'"
             [class.text-secondary]="tab() !== 'join'">
       Unirse
     </button>
-    <button (click)="tab.set('public')"
+    <button role="tab" [attr.aria-selected]="tab() === 'public'" (click)="tab.set('public')"
             class="rounded-xl py-2.5 text-sm font-bold transition"
             [class.bg-accent]="tab() === 'public'" [class.text-accent-text]="tab() === 'public'"
             [class.text-secondary]="tab() !== 'public'">
@@ -116,16 +116,24 @@
     <div class="banner-in flex w-full flex-col gap-2">
       @if (game.publicRooms().length === 0) {
         <div class="rounded-2xl border border-border-a10 bg-surface-a5 px-4 py-8 text-center">
-          <p class="text-sm text-secondary">No hay salas públicas esperando jugadores.</p>
-          <p class="mt-1 text-xs text-muted">¡Crea una y comparte el código!</p>
+           <p class="text-sm text-secondary">No hay salas públicas disponibles.</p>
+           <p class="mt-1 text-xs text-muted">¡Crea una y comparte el código!</p>
         </div>
       }
       @for (room of game.publicRooms(); track room.id) {
-        <div class="flex items-center justify-between gap-3 rounded-2xl border border-border-a10 bg-surface-a5 px-4 py-3">
-          <div class="min-w-0">
-            <p class="truncate text-base font-bold text-primary">{{ room.name }}</p>
-            <p class="text-xs text-secondary">{{ room.playerCount }}/{{ room.maxPlayers }} jugadores · {{ room.id }}</p>
-          </div>
+         <div class="flex items-center justify-between gap-3 rounded-2xl border border-border-a10 bg-surface-a5 px-4 py-3">
+           <div class="min-w-0">
+             <button (click)="togglePublicRoomCode(room.id)" class="max-w-full truncate text-left text-base font-bold text-primary transition active:text-accent">
+               {{ room.name }}
+             </button>
+             <p class="text-xs text-secondary">
+               {{ room.playerCount }}/{{ room.maxPlayers }} jugadores ·
+               <span [class.text-accent]="room.status === 'InGame'">{{ room.status === 'InGame' ? 'En curso' : 'Esperando' }}</span>
+             </p>
+             @if (selectedPublicRoom() === room.id) {
+               <p class="mt-1 text-xs font-black tracking-[3px] text-accent">Código: {{ room.id }}</p>
+             }
+           </div>
           <button (click)="joinPublic(room.id)" [disabled]="!usernameOk() || busy()"
                   class="shrink-0 rounded-xl bg-accent px-4 py-2 text-sm font-bold text-accent-text transition active:scale-95 disabled:opacity-40">
             Unirse

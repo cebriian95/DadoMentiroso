@@ -23,6 +23,7 @@ export class GameComponent {
   private readonly destroyRef = inject(DestroyRef);
 
   protected readonly room = this.game.room;
+  protected readonly roomCodeOpen = signal(false);
   protected readonly gameState = computed(() => this.room()?.game ?? null);
   protected readonly phase = computed(() => this.gameState()?.phase ?? null);
 
@@ -69,6 +70,7 @@ export class GameComponent {
   // ---- Tirada de dados ----
   protected readonly hasRolled = signal(false);
   protected readonly rollingNow = signal(false);
+  protected readonly diceHidden = signal(false);
   private lastRound = 0;
 
   // ---- Apuesta ----
@@ -138,21 +140,21 @@ export class GameComponent {
 
   // ---- Chat ----
   protected readonly chatOpen = signal(false);
-  private lastReadCount = this.game.chat().length;
-  protected readonly unread = computed(() => {
-    if (this.chatOpen()) return 0;
-    const since = this.game.chat().slice(this.lastReadCount);
-    return since.filter(m => m.playerId !== this.user.playerId).length;
-  });
+  protected readonly unread = this.game.unreadChat;
 
   protected readonly confirmLeave = signal(false);
   protected readonly rulesOpen = signal(false);
   protected readonly kickTarget = signal<{ id: string; name: string } | null>(null);
   private pressTimer: ReturnType<typeof setTimeout> | null = null;
+  private rollTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
     const timer = setInterval(() => this.now.set(Date.now()), 250);
     this.destroyRef.onDestroy(() => clearInterval(timer));
+    this.destroyRef.onDestroy(() => {
+      if (this.pressTimer) clearTimeout(this.pressTimer);
+      if (this.rollTimer) clearTimeout(this.rollTimer);
+    });
 
     effect(() => {
       const g = this.gameState();
@@ -186,9 +188,10 @@ export class GameComponent {
   protected rollDice() {
     if (this.hasRolled() || this.rollingNow()) return;
     this.rollingNow.set(true);
-    setTimeout(() => {
+    this.rollTimer = setTimeout(() => {
       this.rollingNow.set(false);
       this.hasRolled.set(true);
+      this.rollTimer = null;
     }, ROLL_ANIMATION_MS);
     void this.game.markRolled();
   }
@@ -204,7 +207,11 @@ export class GameComponent {
   protected toggleChat() {
     const opening = !this.chatOpen();
     this.chatOpen.set(opening);
-    if (opening) this.lastReadCount = this.game.chat().length;
+    if (opening) this.game.markChatRead();
+  }
+
+  protected toggleRoomCode() {
+    this.roomCodeOpen.update(open => !open);
   }
 
   protected getPlayerNameColor(playerId: string): string {
@@ -235,6 +242,10 @@ export class GameComponent {
 
   protected sortMyDice() {
     this.game.myDice.update(d => [...d].sort((a, b) => a - b));
+  }
+
+  protected toggleDiceVisibility() {
+    this.diceHidden.update(hidden => !hidden);
   }
 
   protected async doLeave() {

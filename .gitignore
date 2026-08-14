@@ -6,6 +6,12 @@ server/obj/
 client/node_modules/
 client/dist/
 client/.angular/
+*.log
+
+# Local configuration
+.env
+.env.*
+!.env.example
 
 # SO
 .DS_Store

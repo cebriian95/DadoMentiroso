@@ -2,17 +2,22 @@ services:
   backend:
     image: cebriian95/dado-mentiroso-api_arm:latest
     container_name: dado-mentiroso-api
-    ports:
-      - "5253:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/health >/dev/null"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     restart: always
 
   frontend:
     image: cebriian95/dado-mentiroso-frontend_arm:latest
     container_name: dado-mentiroso-web
     ports:
-      - "3000:80"
+      - "3000:8080"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     restart: always

@@ -1,4 +1,4 @@
-import { AfterViewChecked, ChangeDetectionStrategy, Component, ElementRef, inject, viewChild } from '@angular/core';
+import { AfterViewChecked, ChangeDetectionStrategy, Component, ElementRef, inject, input, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { GameService } from '../../services/game.service';
 import { UserService } from '../../services/user.service';
@@ -10,7 +10,7 @@ import { UserService } from '../../services/user.service';
   imports: [FormsModule],
   template: `
     <div class="flex h-full min-h-0 flex-col">
-      <div #list class="flex-1 min-h-0 overflow-y-auto px-3 py-2 flex flex-col gap-1.5">
+      <div #list class="flex-1 min-h-0 overflow-y-auto px-3 py-2 flex flex-col gap-1.5" (scroll)="onScroll()">
         @if (game.chat().length === 0) {
           <p class="text-center text-sm text-muted mt-6">Aún no hay mensajes. ¡Saluda!</p>
         }
@@ -37,12 +37,21 @@ export class ChatComponent implements AfterViewChecked {
   protected readonly game = inject(GameService);
   protected readonly user = inject(UserService);
   private readonly listRef = viewChild<ElementRef<HTMLElement>>('list');
+  readonly active = input(true);
 
   protected draft = '';
+  private followTail = true;
 
   ngAfterViewChecked() {
     const el = this.listRef()?.nativeElement;
-    if (el) el.scrollTop = el.scrollHeight;
+    if (el && this.followTail) {
+      el.scrollTop = el.scrollHeight;
+    }
+  }
+
+  protected onScroll() {
+    const el = this.listRef()?.nativeElement;
+    if (el) this.followTail = el.scrollHeight - el.scrollTop - el.clientHeight < 72;
   }
 
   protected send() {

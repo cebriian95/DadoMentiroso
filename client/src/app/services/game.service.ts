@@ -1,21 +1,13 @@
 import { Injectable, signal } from '@angular/core';
 import * as signalR from '@microsoft/signalr';
-import { BetDto, ChatMessageDto, PublicRoomDto, RevealDto, RoomDto } from '../models';
+import { BetDto, ChatMessageDto, PublicRoomDto, RevealDto, RoomDto, RoomJoinResponse } from '../models';
+import { AVATAR_COLORS } from '../avatar-colors';
 import { UserService } from './user.service';
-
-/**
- * 12 colores distinguibles para los avatares, elegidos para que queden bien
- * sobre fondo oscuro y sean legibles con texto blanco.
- */
-const AVATAR_COLORS = [
-  '#d62828', '#22577a', '#1b7a4a', '#7209b7',
-  '#e76f51', '#2a9d8f', '#c1121f', '#5c4d7d',
-  '#06a77d', '#9b5de5', '#e63946', '#264653',
-];
 
 /** Claves de localStorage para persistir la sesión activa y reconectar al recargar. */
 const ROOM_CODE_KEY = 'dmRoomCode';
-const ROOM_PASSWORD_KEY = 'dmRoomPassword';
+const RECONNECT_TOKEN_KEY = 'dmReconnectToken';
+const LEGACY_ROOM_PASSWORD_KEY = 'dmRoomPassword';
 
 /** Conexión SignalR + estado global de la sala. Los componentes solo leen señales. */
 @Injectable({ providedIn: 'root' })
@@ -28,9 +20,11 @@ export class GameService {
   readonly gameOver = signal<{ winnerId: string; winnerName: string } | null>(null);
   readonly publicRooms = signal<PublicRoomDto[]>([]);
   readonly chat = signal<ChatMessageDto[]>([]);
+  readonly unreadChat = signal(0);
   readonly actionError = signal<string | null>(null);
   readonly sessionEnded = signal<'kicked' | 'deleted' | null>(null);
   readonly connected = signal(false);
+  readonly offline = signal(typeof navigator !== 'undefined' && !navigator.onLine);
   /** Indica si se está intentando reconectar (para mostrar feedback visual). */
   readonly reconnecting = signal(false);
   /** Apuestas de la ronda actual (historial). Se limpia al empezar una ronda nueva. */
@@ -39,14 +33,16 @@ export class GameService {
   readonly loserPlayers = signal<string[]>([]);
 
   // Para re-unirse automáticamente tras una reconexión de SignalR.
-  private lastJoin: { code: string; password: string | null } | null = null;
+  private lastJoin: { code: string; reconnectToken: string } | null = null;
+  private connectPromise: Promise<void> | null = null;
+  private watchingPublicRooms = false;
 
   private lastRound = 0;
 
   constructor(private user: UserService) {
-    const hubUrl = location.port === '4200'
-      ? `${location.protocol}//${location.hostname}:5080/hub/game`
-      : '/hub/game';
+    // Las versiones anteriores persistían la contraseña de la sala.
+    localStorage.removeItem(LEGACY_ROOM_PASSWORD_KEY);
+    const hubUrl = '/hub/game';
 
     this.hub = new signalR.HubConnectionBuilder()
       .withUrl(hubUrl)
@@ -60,7 +56,7 @@ export class GameService {
       // Nueva ronda: limpiar historial de apuestas y loser.
       if (room.game?.phase === 'Rolling' && prev?.game?.phase !== 'Rolling') {
         this.reveal.set(null);
-        this.roundBets.set([]);
+        this.roundBets.set(room.game.roundBets ?? []);
         this.loserPlayers.set([]);
         this.lastRound = room.game.roundNumber;
       }
@@ -68,19 +64,11 @@ export class GameService {
         this.gameOver.set(null);
       }
 
-      // Si hay apuesta actual (al reconectar o tras apuesta) añadirla al historial.
-      const bet = room.game?.currentBet;
-      if (bet && room.game?.phase === 'Betting') {
-        const existing = this.roundBets();
-        if (existing.length === 0 || existing[existing.length - 1].playerId !== bet.playerId) {
-          this.roundBets.update(b => [...b, bet]);
-        }
-      }
+      this.roundBets.set(room.game?.roundBets ?? []);
     });
     this.hub.on('YourDice', (dice: number[]) => this.myDice.set(dice));
     this.hub.on('RevealAll', (dto: RevealDto) => {
       this.reveal.set(dto);
-      this.roundBets.set([]);
       this.loserPlayers.set(dto.loserIds);
       setTimeout(() => this.loserPlayers.set([]), 7000);
       const mine = dto.players.find(p => p.playerId === this.user.playerId);
@@ -91,34 +79,54 @@ export class GameService {
       this.myDice.set([]);
       this.gameOver.set({ winnerId, winnerName });
     });
-    this.hub.on('ChatMessage', (msg: ChatMessageDto) => this.chat.update(list => [...list.slice(-99), msg]));
+    this.hub.on('ChatMessage', (msg: ChatMessageDto) => {
+      this.chat.update(list => [...list.slice(-99), msg]);
+      if (msg.playerId !== this.user.playerId) this.unreadChat.update(count => count + 1);
+    });
     this.hub.on('PublicRooms', (rooms: PublicRoomDto[]) => this.publicRooms.set(rooms));
     this.hub.on('Kicked', () => this.endSession('kicked'));
     this.hub.on('RoomDeleted', () => this.endSession('deleted'));
     this.hub.on('ActionError', (msg: string) => this.actionError.set(msg));
 
+    this.hub.onreconnecting(() => {
+      this.connected.set(false);
+      this.reconnecting.set(true);
+    });
     this.hub.onreconnected(() => {
       this.connected.set(true);
-      if (this.lastJoin) void this.joinRoom(this.lastJoin.code, this.lastJoin.password);
+      this.reconnecting.set(false);
+      if (this.watchingPublicRooms) void this.subscribePublicRooms();
+      if (this.lastJoin) void this.reconnectRoom();
     });
-    this.hub.onclose(() => this.connected.set(false));
+    this.hub.onclose(() => {
+      this.connected.set(false);
+      this.reconnecting.set(false);
+    });
+    window.addEventListener('online', this.setOnline);
+    window.addEventListener('offline', this.setOffline);
   }
 
+  private readonly setOnline = () => this.offline.set(false);
+  private readonly setOffline = () => this.offline.set(true);
+
   async connect(): Promise<void> {
-    if (this.hub.state === signalR.HubConnectionState.Disconnected) {
-      await this.hub.start();
-      this.connected.set(true);
-    }
+    if (this.hub.state === signalR.HubConnectionState.Connected) return;
+    if (this.connectPromise) return this.connectPromise;
+    this.connectPromise = this.hub.start()
+      .then(() => { this.connected.set(true); })
+      .finally(() => { this.connectPromise = null; });
+    return this.connectPromise;
   }
 
   private endSession(reason: 'kicked' | 'deleted') {
     localStorage.removeItem(ROOM_CODE_KEY);
-    localStorage.removeItem(ROOM_PASSWORD_KEY);
+    localStorage.removeItem(RECONNECT_TOKEN_KEY);
     this.room.set(null);
     this.myDice.set([]);
     this.reveal.set(null);
     this.gameOver.set(null);
     this.chat.set([]);
+    this.unreadChat.set(0);
     this.lastJoin = null;
     this.sessionEnded.set(reason);
   }
@@ -127,14 +135,17 @@ export class GameService {
     try {
       return await this.hub.invoke<T>(method, ...args);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      this.actionError.set(msg.replace(/^.*HubException:\s*/i, '').replace(/^An unexpected error occurred invoking '.*?' on the server\.\s*/i, '') || 'Error inesperado');
+      if (!this.isTransient(err)) {
+        const msg = err instanceof Error ? err.message : String(err);
+        this.actionError.set(msg.replace(/^.*HubException:\s*/i, '').replace(/^An unexpected error occurred invoking '.*?' on the server\.\s*/i, '') || 'Error inesperado');
+      }
       throw err;
     }
   }
 
   clearError() { this.actionError.set(null); }
   clearSessionEnded() { this.sessionEnded.set(null); }
+  markChatRead() { this.unreadChat.set(0); }
 
   /** Intenta reconectar a la última sala guardada en localStorage. Devuelve true si tuvo éxito. */
   async tryReconnect(): Promise<boolean> {
@@ -143,26 +154,30 @@ export class GameService {
 
     this.reconnecting.set(true);
     try {
-      const password = localStorage.getItem(ROOM_PASSWORD_KEY) || null;
+      const reconnectToken = localStorage.getItem(RECONNECT_TOKEN_KEY) || '';
       await this.connect();
-      const room = await this.invoke<RoomDto>('JoinRoom', {
+      const response = await this.invoke<RoomJoinResponse>('JoinRoom', {
         playerId: this.user.playerId,
         playerName: this.user.username(),
         roomCode: code,
-        password,
+        password: null,
+        reconnectToken,
       });
+      const { room, reconnectToken: token } = response;
       this.room.set(room);
       this.chat.set([]);
-      this.lastJoin = { code: room.id, password };
+      this.lastJoin = { code: room.id, reconnectToken: token };
       localStorage.setItem(ROOM_CODE_KEY, room.id);
-      if (password) localStorage.setItem(ROOM_PASSWORD_KEY, password);
+      localStorage.setItem(RECONNECT_TOKEN_KEY, token);
       this.reconnecting.set(false);
       return true;
-    } catch {
-      localStorage.removeItem(ROOM_CODE_KEY);
-      localStorage.removeItem(ROOM_PASSWORD_KEY);
+    } catch (err) {
+      if (!this.isTransient(err)) {
+        localStorage.removeItem(ROOM_CODE_KEY);
+        localStorage.removeItem(RECONNECT_TOKEN_KEY);
+      }
       this.reconnecting.set(false);
-      this.actionError.set('No se pudo reconectar a la sala');
+      if (!this.isTransient(err)) this.actionError.set('No se pudo reconectar a la sala');
       return false;
     }
   }
@@ -180,41 +195,39 @@ export class GameService {
 
   async createRoom(roomName: string, isPrivate: boolean, password: string | null): Promise<void> {
     await this.connect();
-    const room = await this.invoke<RoomDto>('CreateRoom', {
+    const response = await this.invoke<RoomJoinResponse>('CreateRoom', {
       playerId: this.user.playerId,
       playerName: this.user.username(),
       roomName,
       isPrivate,
       password,
     });
-    this.room.set(room);
+    this.room.set(response.room);
     this.chat.set([]);
-    this.lastJoin = { code: room.id, password };
-    localStorage.setItem(ROOM_CODE_KEY, room.id);
-    if (password) localStorage.setItem(ROOM_PASSWORD_KEY, password);
-    else localStorage.removeItem(ROOM_PASSWORD_KEY);
+    this.lastJoin = { code: response.room.id, reconnectToken: response.reconnectToken };
+    localStorage.setItem(ROOM_CODE_KEY, response.room.id);
+    localStorage.setItem(RECONNECT_TOKEN_KEY, response.reconnectToken);
   }
 
   async joinRoom(code: string, password: string | null): Promise<void> {
     await this.connect();
-    const room = await this.invoke<RoomDto>('JoinRoom', {
+    const response = await this.invoke<RoomJoinResponse>('JoinRoom', {
       playerId: this.user.playerId,
       playerName: this.user.username(),
       roomCode: code,
       password,
     });
-    this.room.set(room);
+    this.room.set(response.room);
     this.chat.set([]);
-    this.lastJoin = { code: room.id, password };
-    localStorage.setItem(ROOM_CODE_KEY, room.id);
-    if (password) localStorage.setItem(ROOM_PASSWORD_KEY, password);
-    else localStorage.removeItem(ROOM_PASSWORD_KEY);
+    this.lastJoin = { code: response.room.id, reconnectToken: response.reconnectToken };
+    localStorage.setItem(ROOM_CODE_KEY, response.room.id);
+    localStorage.setItem(RECONNECT_TOKEN_KEY, response.reconnectToken);
   }
 
   async leaveRoom(): Promise<void> {
     this.lastJoin = null;
     localStorage.removeItem(ROOM_CODE_KEY);
-    localStorage.removeItem(ROOM_PASSWORD_KEY);
+    localStorage.removeItem(RECONNECT_TOKEN_KEY);
     try { await this.hub.invoke('LeaveRoom'); } catch { /* la sala puede no existir ya */ }
     this.room.set(null);
     this.myDice.set([]);
@@ -234,13 +247,49 @@ export class GameService {
   markRolled() { return this.invoke('MarkRolled'); }
 
   async watchPublicRooms(): Promise<void> {
+    this.watchingPublicRooms = true;
     await this.connect();
-    await this.hub.invoke('SubscribePublicRooms');
+    await this.subscribePublicRooms();
   }
 
   async unwatchPublicRooms(): Promise<void> {
+    this.watchingPublicRooms = false;
     if (this.hub.state === signalR.HubConnectionState.Connected) {
       try { await this.hub.invoke('UnsubscribePublicRooms'); } catch { /* conexión caída */ }
     }
+  }
+
+  private async subscribePublicRooms() {
+    if (this.hub.state === signalR.HubConnectionState.Connected) {
+      await this.hub.invoke('SubscribePublicRooms');
+    }
+  }
+
+  private async reconnectRoom() {
+    if (!this.lastJoin) return;
+    try {
+      await this.joinWithToken(this.lastJoin.code, this.lastJoin.reconnectToken);
+    } catch (err) {
+      if (!this.isTransient(err)) this.actionError.set('No se pudo reconectar a la sala');
+    }
+  }
+
+  private async joinWithToken(code: string, reconnectToken: string) {
+    const response = await this.invoke<RoomJoinResponse>('JoinRoom', {
+      playerId: this.user.playerId,
+      playerName: this.user.username(),
+      roomCode: code,
+      password: null,
+      reconnectToken,
+    });
+    this.room.set(response.room);
+    this.lastJoin = { code: response.room.id, reconnectToken: response.reconnectToken };
+    localStorage.setItem(ROOM_CODE_KEY, response.room.id);
+    localStorage.setItem(RECONNECT_TOKEN_KEY, response.reconnectToken);
+  }
+
+  private isTransient(err: unknown): boolean {
+    return this.offline() || this.hub.state !== signalR.HubConnectionState.Connected ||
+      (err instanceof Error && /network|connection|timeout|transport/i.test(err.message));
   }
 }

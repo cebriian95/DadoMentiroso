@@ -17,7 +17,7 @@ Juego de dados y faroles para **2-12 jugadores** (Perudo / Liar's Dice), online,
 
 - **Crear sala:** nombre de sala (1-30 caracteres), visibilidad pública o privada. Si es privada, contraseña obligatoria de **3 a 20 caracteres**. Al crearla se genera un **código único de 5 caracteres** (alfabeto sin caracteres ambiguos: sin 0/O, 1/I/L).
 - **Unirse a sala privada:** nombre de usuario + código de sala + contraseña.
-- **Salas públicas:** lista en vivo de salas que están en **sala de preparación** (no en mitad de una partida). Unirse no requiere contraseña.
+- **Salas públicas:** lista en vivo de salas en preparación y partidas en curso. Las partidas en curso aparecen marcadas como **En curso**; al tocar su nombre se muestra el código para compartirlo o unirse. Unirse no requiere contraseña.
 - Quien se une a una sala (por código) **en mitad de una partida** queda pendiente y entra al comenzar la siguiente ronda con la media redondeada de los dados de los jugadores activos (mínimo 1 dado).
 - Las salas se **borran automáticamente tras 5 horas de inactividad**.
 - Capacidad máxima: **12 jugadores** por sala.

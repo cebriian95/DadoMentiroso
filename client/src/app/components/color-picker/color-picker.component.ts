@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, model } from '@angular/core';
 import { GameService } from '../../services/game.service';
 import { UserService } from '../../services/user.service';
+import { AVATAR_COLORS } from '../../avatar-colors';
 
 /** Grid de 12 colores: el jugador elige el suyo. Solo los no usados son seleccionables. */
 @Component({
@@ -42,11 +43,7 @@ export class ColorPickerComponent {
 
   readonly open = model(false);
 
-  protected readonly colors = [
-    '#d62828', '#22577a', '#1b7a4a', '#7209b7',
-    '#e76f51', '#2a9d8f', '#c1121f', '#5c4d7d',
-    '#06a77d', '#9b5de5', '#e63946', '#264653',
-  ];
+  protected readonly colors = AVATAR_COLORS;
 
   protected readonly myColor = computed(() =>
     this.game.room()?.players.find(p => p.id === this.user.playerId)?.colorIndex ?? -1);

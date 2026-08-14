@@ -32,6 +32,7 @@ export class HomeComponent implements OnInit, OnDestroy {
   // Unirse a sala
   protected joinCode = signal('');
   protected joinPassword = signal('');
+  protected selectedPublicRoom = signal<string | null>(null);
 
   protected readonly usernameOk = computed(() => this.user.username().trim().length >= 1);
   protected readonly passwordOk = computed(() => !this.isPrivate() || (this.password().length >= 3 && this.password().length <= 20));
@@ -91,6 +92,10 @@ export class HomeComponent implements OnInit, OnDestroy {
   protected async joinPublic(code: string) {
     if (!this.usernameOk() || this.busy()) return;
     await this.doJoin(code, null);
+  }
+
+  protected togglePublicRoomCode(code: string) {
+    this.selectedPublicRoom.update(current => current === code ? null : code);
   }
 
   protected onRulesClosed(open: boolean) {

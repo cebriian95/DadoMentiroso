@@ -20,11 +20,13 @@ public sealed class RoomManager
 
     public Room CreateRoom(Player host, string name, string? password)
     {
-        var code = GenerateCode();
-        var room = new Room { Id = code, Name = name, Password = password, HostId = host.Id };
-        room.Players.Add(host);
-        _rooms[code] = room;
-        return room;
+        while (true)
+        {
+            var code = GenerateCode();
+            var room = new Room { Id = code, Name = name, Password = password, HostId = host.Id };
+            room.Players.Add(host);
+            if (_rooms.TryAdd(code, room)) return room;
+        }
     }
 
     private string GenerateCode()
@@ -40,36 +42,56 @@ public sealed class RoomManager
         }
     }
 
-    public bool TryGetRoom(string code, out Room room) => _rooms.TryGetValue(code, out room!);
+    public bool TryGetRoom(string code, out Room room) => _rooms.TryGetValue(code, out room!) && !room.Removed;
 
-    public List<Room> PublicLobbyRooms() =>
-        _rooms.Values
-            .Where(r => r.Password is null && r.Status == RoomStatus.Lobby)
-            .OrderByDescending(r => r.LastActivity)
-            .ToList();
+    public List<Room> PublicRooms() => _rooms.Values
+        .Where(r => { lock (r.Lock) return !r.Removed && r.Password is null; })
+        .OrderByDescending(r => { lock (r.Lock) return r.LastActivity; })
+        .ToList();
 
-    public void RemoveRoom(Room room)
+    public bool RemoveRoom(Room room)
     {
-        room.TimerCts.Cancel();
-        _rooms.TryRemove(room.Id, out _);
+        lock (room.Lock)
+        {
+            if (room.Removed) return false;
+            room.Removed = true;
+            room.TimerCts.Cancel();
+            _rooms.TryRemove(new KeyValuePair<string, Room>(room.Id, room));
+            foreach (var mapping in _roomCodeByConnection.Where(x => x.Value.Equals(room.Id, StringComparison.OrdinalIgnoreCase)).ToList())
+                _roomCodeByConnection.TryRemove(mapping.Key, out _);
+            return true;
+        }
     }
 
-    public void MapConnection(string connectionId, string roomCode) => _roomCodeByConnection[connectionId] = roomCode;
-    public void UnmapConnection(string connectionId) => _roomCodeByConnection.TryRemove(connectionId, out _);
+    public string? MapConnection(string connectionId, string roomCode)
+    {
+        _roomCodeByConnection.TryGetValue(connectionId, out var previous);
+        _roomCodeByConnection[connectionId] = roomCode;
+        return previous;
+    }
+    public void UnmapConnection(string connectionId, string? roomCode = null)
+    {
+        if (roomCode is null) _roomCodeByConnection.TryRemove(connectionId, out _);
+        else _roomCodeByConnection.TryRemove(new KeyValuePair<string, string>(connectionId, roomCode));
+    }
 
     public bool TryGetRoomByConnection(string connectionId, out Room room)
     {
         room = null!;
-        return _roomCodeByConnection.TryGetValue(connectionId, out var code) && _rooms.TryGetValue(code, out room!);
+        return _roomCodeByConnection.TryGetValue(connectionId, out var code) && _rooms.TryGetValue(code, out room!) && !room.Removed;
     }
 
     /// <summary>Borra las salas inactivas y devuelve las eliminadas para notificar.</summary>
     public List<Room> SweepIdle(DateTimeOffset now)
     {
-        var idle = _rooms.Values.Where(r => now - r.LastActivity > MaxIdle).ToList();
-        foreach (var room in idle) RemoveRoom(room);
-        return idle;
+        var idle = _rooms.Values.Where(r => { lock (r.Lock) return !r.Removed && now - r.LastActivity > MaxIdle; }).ToList();
+        var removed = idle.Where(RemoveRoom).ToList();
+        return removed;
     }
 
-    public void Touch(Room room) => room.LastActivity = DateTimeOffset.UtcNow;
+    public void Touch(Room room)
+    {
+        lock (room.Lock)
+            if (!room.Removed) room.LastActivity = DateTimeOffset.UtcNow;
+    }
 }

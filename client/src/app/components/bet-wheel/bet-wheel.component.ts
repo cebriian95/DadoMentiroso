@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, ElementRef, effect, input, model, v
 import { DiceComponent } from '../dice/dice.component';
 
 // Altura de cada opción: se encoge en pantallas bajas para que quepan los botones sin scroll.
-const ITEM_H = Math.max(38, Math.min(56, Math.round(window.innerHeight * 0.062)));
+const ITEM_H = 48;
 const OUTER = 1.5;     // opciones visibles arriba y abajo de la seleccionada (mitades permiten ver el siguiente)
 
 /** Rueda vertical con scroll-snap para elegir un número (cantidad o valor de dado). */

@@ -6,11 +6,11 @@ import { ChangeDetectionStrategy, Component, model } from '@angular/core';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (open()) {
-      <div class="fixed inset-0 z-[2000] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm" (click)="open.set(false)">
-        <div class="relative w-full max-w-[420px] max-h-[85dvh] overflow-y-auto rounded-2xl border border-accent/20 bg-gradient-to-b from-[#151a20] to-[#0f1318] p-5 shadow-[var(--shadow-lg)]" (click)="$event.stopPropagation()">
-          <button (click)="open.set(false)" class="absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-full bg-surface-a15 text-sm text-muted transition active:bg-surface-a30">✕</button>
+        <div class="fixed inset-0 z-[2000] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm" role="presentation" (click)="open.set(false)">
+         <div class="relative w-full max-w-[420px] max-h-[85dvh] overflow-y-auto rounded-2xl border border-accent/20 bg-gradient-to-b from-[#151a20] to-[#0f1318] p-5 shadow-[var(--shadow-lg)]" role="dialog" aria-modal="true" aria-labelledby="rules-title" (click)="$event.stopPropagation()">
+           <button type="button" (click)="open.set(false)" aria-label="Cerrar reglas" class="absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-full bg-surface-a15 text-sm text-muted transition active:bg-surface-a30">✕</button>
 
-          <h2 class="mb-4 text-center text-xl font-black tracking-wide text-accent">CÓMO JUGAR</h2>
+           <h2 id="rules-title" class="mb-4 text-center text-xl font-black tracking-wide text-accent">CÓMO JUGAR</h2>
 
           <div class="flex flex-col gap-3 text-sm leading-relaxed text-secondary">
             <p><strong class="text-primary">Dado Mentiroso</strong> es un juego de dados y faroles para 2 o más jugadores. Cada uno tira sus dados en secreto y por turnos se apuesta cuántos dados con un cierto valor hay <em>en total</em> entre todos.</p>

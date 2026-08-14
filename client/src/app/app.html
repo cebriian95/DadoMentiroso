@@ -1,5 +1,15 @@
 <router-outlet />
 
+@if (game.offline()) {
+  <div class="fixed inset-x-0 bottom-0 z-[2100] border-t border-danger/40 bg-danger-a15 px-4 py-2 text-center text-xs font-bold text-danger-light safe-bottom" role="status">
+    Sin conexión. Intentando reconectar…
+  </div>
+} @else if (game.reconnecting()) {
+  <div class="fixed inset-x-0 bottom-0 z-[2100] border-t border-accent/30 bg-panel px-4 py-2 text-center text-xs font-bold text-accent safe-bottom" role="status">
+    Reconectando…
+  </div>
+}
+
 <!-- Toast global de errores -->
 @if (error(); as msg) {
   <div class="banner-in fixed inset-x-0 top-4 z-[2000] mx-auto w-fit max-w-[90vw] rounded-xl border border-danger/40 bg-danger-a15 px-5 py-3 text-center text-sm font-semibold text-danger-light shadow-lg shadow-[var(--shadow)] backdrop-blur"

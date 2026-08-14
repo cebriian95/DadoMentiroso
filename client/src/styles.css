@@ -103,6 +103,8 @@ body {
   user-select: none;
 }
 
+.safe-bottom { padding-bottom: max(.5rem, env(safe-area-inset-bottom)); }
+
 input, textarea { user-select: text; }
 
 /* ============================================ */

@@ -30,6 +30,12 @@ export interface GameDto {
   phaseEndsAt: string | null;
   turnEndsAt: string | null;
   turnOrder: string[];
+  roundBets: BetDto[];
+}
+
+export interface RoomJoinResponse {
+  room: RoomDto;
+  reconnectToken: string;
 }
 
 export interface RoomDto {
@@ -48,6 +54,7 @@ export interface PublicRoomDto {
   name: string;
   playerCount: number;
   maxPlayers: number;
+  status: 'Lobby' | 'InGame';
 }
 
 export interface RevealPlayerDto {

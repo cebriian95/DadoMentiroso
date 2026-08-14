@@ -27,19 +27,28 @@ export class LobbyComponent {
   protected readonly colorPickerOpen = signal(false);
   // Chat
   protected readonly chatOpen = signal(false);
-  private lastReadCount = this.game.chat().length;
-  protected readonly unread = computed(() => {
-    if (this.chatOpen()) return 0;
-    const since = this.game.chat().slice(this.lastReadCount);
-    return since.filter(m => m.playerId !== this.user.playerId).length;
-  });
+  protected readonly unread = this.game.unreadChat;
 
-  protected copyCode() {
+  protected async copyCode() {
     const code = this.room()?.id;
     if (!code) return;
-    try { void navigator.clipboard?.writeText(code); } catch { }
+    try {
+      if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(code);
+      else this.copyWithExecCommand(code);
+    } catch { this.copyWithExecCommand(code); }
     this.copied.set(true);
     setTimeout(() => this.copied.set(false), 1500);
+  }
+
+  private copyWithExecCommand(value: string) {
+    const input = document.createElement('textarea');
+    input.value = value;
+    input.style.position = 'fixed';
+    input.style.opacity = '0';
+    document.body.appendChild(input);
+    input.select();
+    document.execCommand('copy');
+    input.remove();
   }
 
   protected setDice(delta: number) {
@@ -74,6 +83,6 @@ export class LobbyComponent {
   protected toggleChat() {
     const opening = !this.chatOpen();
     this.chatOpen.set(opening);
-    if (opening) this.lastReadCount = this.game.chat().length;
+    if (opening) this.game.markChatRead();
   }
 }

@@ -1,0 +1,8 @@
+{
+  "/hub/game": {
+    "target": "http://localhost:5080",
+    "secure": false,
+    "changeOrigin": true,
+    "ws": true
+  }
+}

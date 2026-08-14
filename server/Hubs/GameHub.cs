@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.SignalR;
 using server.Models;
 using server.Services;
+using System.Security.Cryptography;
 
 namespace server.Hubs;
 
@@ -21,13 +22,13 @@ public sealed class GameHub : Hub
 
     // ---- Salas ----
 
-    public async Task<RoomDto> CreateRoom(CreateRoomRequest req)
+    public async Task<RoomJoinResponse> CreateRoom(CreateRoomRequest req)
     {
         var playerName = (req.PlayerName ?? "").Trim();
         var roomName = (req.RoomName ?? "").Trim();
         if (playerName.Length is < 1 or > 16) throw new HubException("Nombre de usuario inválido (1-16 caracteres)");
         if (roomName.Length is < 1 or > 30) throw new HubException("Nombre de sala inválido (1-30 caracteres)");
-        if (string.IsNullOrWhiteSpace(req.PlayerId)) throw new HubException("Falta el identificador de jugador");
+        ValidatePlayerId(req.PlayerId);
 
         string? password = null;
         if (req.IsPrivate)
@@ -37,26 +38,28 @@ public sealed class GameHub : Hub
                 throw new HubException($"La contraseña debe tener entre {MinPasswordLength} y {MaxPasswordLength} caracteres");
         }
 
-        var player = new Player { Id = req.PlayerId, Name = playerName, ConnectionId = Context.ConnectionId, ColorIndex = 0 };
+        await DetachPreviousRoom();
+        var player = new Player { Id = req.PlayerId, Name = playerName, ConnectionId = Context.ConnectionId,
+            ColorIndex = 0, ReconnectToken = NewReconnectToken() };
         var room = _rooms.CreateRoom(player, roomName, password);
 
         _rooms.MapConnection(Context.ConnectionId, room.Id);
         await Groups.AddToGroupAsync(Context.ConnectionId, room.Id);
-
         RoomDto dto;
         lock (room.Lock)
         {
             dto = GameEngine.BuildRoomDto(room);
             _engine.BroadcastRoomLocked(room);
         }
-        return dto;
+        return new RoomJoinResponse(dto, player.ReconnectToken);
     }
 
-    public async Task<RoomDto> JoinRoom(JoinRoomRequest req)
+    public async Task<RoomJoinResponse> JoinRoom(JoinRoomRequest req)
     {
         var playerName = (req.PlayerName ?? "").Trim();
         if (playerName.Length is < 1 or > 16) throw new HubException("Nombre de usuario inválido (1-16 caracteres)");
         if (string.IsNullOrWhiteSpace(req.RoomCode)) throw new HubException("Falta el código de sala");
+        ValidatePlayerId(req.PlayerId);
         if (!_rooms.TryGetRoom(req.RoomCode.Trim(), out var room)) throw new HubException("La sala no existe");
 
         int[]? myDice = null;
@@ -66,7 +69,12 @@ public sealed class GameHub : Hub
             var existing = room.Players.FirstOrDefault(p => p.Id == req.PlayerId);
             if (existing is not null)
             {
-                // Reconexión (dentro de la ventana de 60s) con el mismo id de jugador.
+                if (req.ReconnectToken is null ||
+                    req.ReconnectToken.Length != existing.ReconnectToken.Length ||
+                    !CryptographicOperations.FixedTimeEquals(
+                        System.Text.Encoding.UTF8.GetBytes(existing.ReconnectToken),
+                        System.Text.Encoding.UTF8.GetBytes(req.ReconnectToken)))
+                    throw new HubException("Token de reconexión inválido");
                 existing.Name = playerName;
                 existing.ConnectionId = Context.ConnectionId;
                 existing.IsDisconnected = false;
@@ -80,13 +88,17 @@ public sealed class GameHub : Hub
                     throw new HubException("Contraseña incorrecta");
                 if (room.Players.Count >= RoomManager.MaxPlayers)
                     throw new HubException("La sala está llena");
+                var previousPlayer = room.Players.FirstOrDefault(p => p.ConnectionId == Context.ConnectionId);
+                if (previousPlayer is not null)
+                    _engine.RemovePlayerLocked(room, previousPlayer.Id);
 
                 var player = new Player
                 {
                     Id = req.PlayerId,
                     Name = playerName,
                     ConnectionId = Context.ConnectionId,
-                    ColorIndex = AssignColor(room)
+                    ColorIndex = AssignColor(room),
+                    ReconnectToken = NewReconnectToken()
                 };
                 if (room.Status == RoomStatus.InGame)
                     _engine.MarkPendingJoinLocked(room, player);
@@ -98,12 +110,14 @@ public sealed class GameHub : Hub
         }
 
         // Primero unir al grupo y luego emitir, para que el que entra también reciba el RoomState.
+        await DetachPreviousRoom(room.Id);
         _rooms.MapConnection(Context.ConnectionId, room.Id);
         await Groups.AddToGroupAsync(Context.ConnectionId, room.Id);
+        var reconnectToken = room.Players.First(p => p.Id == req.PlayerId).ReconnectToken;
         _engine.Broadcast(room);
         if (myDice is not null)
             await Clients.Caller.SendAsync("YourDice", myDice);
-        return dto;
+        return new RoomJoinResponse(dto, reconnectToken);
     }
 
     public async Task LeaveRoom()
@@ -225,8 +239,12 @@ public sealed class GameHub : Hub
 
     public Task<List<PublicRoomDto>> GetPublicRooms()
     {
-        var list = _rooms.PublicLobbyRooms()
-            .Select(r => new PublicRoomDto(r.Id, r.Name, r.Players.Count, RoomManager.MaxPlayers))
+        var list = _rooms.PublicRooms()
+            .Select(r =>
+            {
+                lock (r.Lock)
+                    return new PublicRoomDto(r.Id, r.Name, r.Players.Count, RoomManager.MaxPlayers, r.Status.ToString());
+            })
             .ToList();
         return Task.FromResult(list);
     }
@@ -250,7 +268,7 @@ public sealed class GameHub : Hub
             if (colorIndex < 0 || colorIndex >= 12) return Task.CompletedTask;
             var taken = room.Players.Where(p => p.Id != player!.Id).Select(p => p.ColorIndex).ToHashSet();
             if (taken.Contains(colorIndex)) return Task.CompletedTask;
-            player.ColorIndex = colorIndex;
+            player!.ColorIndex = colorIndex;
             _rooms.Touch(room);
             _engine.BroadcastRoomLocked(room);
         }
@@ -273,6 +291,27 @@ public sealed class GameHub : Hub
         for (int i = 0; i < 12; i++)
             if (!used.Contains(i)) return i;
         return 0;
+    }
+
+    private static string NewReconnectToken() => Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
+
+    private static void ValidatePlayerId(string playerId)
+    {
+        if (string.IsNullOrWhiteSpace(playerId) || playerId.Length > 64 || !Guid.TryParse(playerId, out _))
+            throw new HubException("Identificador de jugador inválido");
+    }
+
+    private Task DetachPreviousRoom(string? keepRoom = null)
+    {
+        if (!_rooms.TryGetRoomByConnection(Context.ConnectionId, out var previous) ||
+            previous.Id.Equals(keepRoom, StringComparison.OrdinalIgnoreCase)) return Task.CompletedTask;
+        lock (previous.Lock)
+        {
+            var player = previous.Players.FirstOrDefault(p => p.ConnectionId == Context.ConnectionId);
+            if (player is not null) _engine.RemovePlayerLocked(previous, player.Id);
+        }
+        _rooms.UnmapConnection(Context.ConnectionId, previous.Id);
+        return Groups.RemoveFromGroupAsync(Context.ConnectionId, previous.Id);
     }
 
     private bool TryGetContext(out Room room, out Player? player)

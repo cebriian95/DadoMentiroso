@@ -5,18 +5,18 @@ import { ChangeDetectionStrategy, Component, input, output } from '@angular/core
   selector: 'app-confirm-modal',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="fixed inset-0 z-[1000] flex items-center justify-center bg-surface-a70 p-5 backdrop-blur-sm" (click)="cancelled.emit()">
-      <div class="w-[300px] rounded-2xl border border-border-a10 bg-gradient-to-br from-[#1a1f2e] to-[#0f1420] p-6 shadow-2xl shadow-[var(--shadow-lg)]" (click)="$event.stopPropagation()">
+    <div class="fixed inset-0 z-[1000] flex items-center justify-center bg-surface-a70 p-5 backdrop-blur-sm" role="presentation" (click)="cancelled.emit()">
+      <div class="w-[300px] rounded-2xl border border-border-a10 bg-gradient-to-br from-[#1a1f2e] to-[#0f1420] p-6 shadow-2xl shadow-[var(--shadow-lg)]" role="dialog" aria-modal="true" [attr.aria-label]="title()" (click)="$event.stopPropagation()">
         <h3 class="mb-2 text-base font-bold text-primary">{{ title() }}</h3>
         <p class="mb-6 text-sm text-secondary">{{ message() }}</p>
         <div class="flex gap-3">
-          <button (click)="confirmed.emit()"
+           <button type="button" (click)="confirmed.emit()"
                   class="flex-1 rounded-xl py-2.5 text-sm font-bold transition active:scale-95"
                   [class.bg-danger]="danger()" [class.text-primary]="danger()"
                   [class.bg-accent-light]="!danger()" [class.text-accent-text]="!danger()">
             {{ confirmLabel() }}
           </button>
-          <button (click)="cancelled.emit()"
+           <button type="button" (click)="cancelled.emit()"
                   class="flex-1 rounded-xl bg-surface-a10 py-2.5 text-sm font-bold text-secondary transition active:bg-surface-a20">
             Cancelar
           </button>
