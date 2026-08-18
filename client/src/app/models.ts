@@ -31,6 +31,8 @@ export interface GameDto {
   turnEndsAt: string | null;
   turnOrder: string[];
   roundBets: BetDto[];
+  currentReveal: RevealDto | null;
+  hasRolledForPlayer: boolean;
 }
 
 export interface RoomJoinResponse {
@@ -47,6 +49,7 @@ export interface RoomDto {
   status: 'Lobby' | 'InGame';
   players: PlayerDto[];
   game: GameDto | null;
+  lastWinner: GameResultDto | null;
 }
 
 export interface PublicRoomDto {
@@ -71,6 +74,11 @@ export interface RevealDto {
   players: RevealPlayerDto[];
   winnerId: string | null;
   winnerName: string | null;
+}
+
+export interface GameResultDto {
+  playerId: string;
+  playerName: string;
 }
 
 export interface ChatMessageDto {

@@ -52,6 +52,9 @@ public sealed class Room
     public DateTimeOffset? TurnEndsAt { get; set; }
     public HashSet<string> RolledPlayers { get; } = [];
     public List<Bet> RoundBets { get; } = [];
+    public RevealDto? CurrentReveal { get; set; }
+    public GameResultDto? LastWinner { get; set; }
+    public TimeSpan? PausedTurnRemaining { get; set; }
     public bool Removed { get; set; }
 }
 
@@ -59,11 +62,12 @@ public sealed class Room
 
 public sealed record PlayerDto(string Id, string Name, int DiceCount, bool IsHost, bool IsSpectator, bool IsDisconnected, int Wins, int ColorIndex, bool PendingJoin);
 public sealed record BetDto(string PlayerId, string PlayerName, int Quantity, int Value);
-public sealed record GameDto(string Phase, BetDto? CurrentBet, string? CurrentTurnPlayerId, int RoundNumber, int TotalDiceInPlay, DateTimeOffset? PhaseEndsAt, DateTimeOffset? TurnEndsAt, List<string> TurnOrder, List<BetDto> RoundBets);
-public sealed record RoomDto(string Id, string Name, bool IsPrivate, string HostId, int DicePerPlayer, string Status, List<PlayerDto> Players, GameDto? Game);
+public sealed record GameDto(string Phase, BetDto? CurrentBet, string? CurrentTurnPlayerId, int RoundNumber, int TotalDiceInPlay, DateTimeOffset? PhaseEndsAt, DateTimeOffset? TurnEndsAt, List<string> TurnOrder, List<BetDto> RoundBets, RevealDto? CurrentReveal, bool HasRolledForPlayer);
+public sealed record RoomDto(string Id, string Name, bool IsPrivate, string HostId, int DicePerPlayer, string Status, List<PlayerDto> Players, GameDto? Game, GameResultDto? LastWinner);
 public sealed record PublicRoomDto(string Id, string Name, int PlayerCount, int MaxPlayers, string Status);
 public sealed record RevealPlayerDto(string PlayerId, string PlayerName, int[] Dice);
 public sealed record RevealDto(string Resolution, BetDto Bet, int ActualCount, List<string> LoserIds, List<RevealPlayerDto> Players, string? WinnerId, string? WinnerName);
+public sealed record GameResultDto(string PlayerId, string PlayerName);
 public sealed record ChatMessageDto(string PlayerId, string PlayerName, string Text, DateTimeOffset At);
 
 public sealed record CreateRoomRequest(string PlayerId, string PlayerName, string RoomName, bool IsPrivate, string? Password);

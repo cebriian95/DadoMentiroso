@@ -25,6 +25,7 @@ export class LobbyComponent {
   protected readonly confirmDelete = signal(false);
   protected readonly confirmLeave = signal(false);
   protected readonly colorPickerOpen = signal(false);
+  protected readonly actionPending = signal<'start' | 'kick' | 'dice' | null>(null);
   // Chat
   protected readonly chatOpen = signal(false);
   protected readonly unread = this.game.unreadChat;
@@ -52,14 +53,21 @@ export class LobbyComponent {
   }
 
   protected setDice(delta: number) {
+    if (this.actionPending()) return;
     const current = this.room()?.dicePerPlayer ?? 5;
     const next = Math.min(10, Math.max(1, current + delta));
-    if (next !== current) void this.game.setDiceCount(next);
+    if (next !== current) {
+      this.actionPending.set('dice');
+      void this.game.setDiceCount(next).then(() => this.actionPending.set(null), () => this.actionPending.set(null));
+    }
   }
 
   protected confirmKick() {
     const target = this.kickTarget();
-    if (target) void this.game.kickPlayer(target.id);
+    if (target && !this.actionPending()) {
+      this.actionPending.set('kick');
+      void this.game.kickPlayer(target.id).then(() => this.actionPending.set(null), () => this.actionPending.set(null));
+    }
     this.kickTarget.set(null);
   }
 
@@ -74,7 +82,12 @@ export class LobbyComponent {
     this.router.navigate(['/']);
   }
 
-  protected startGame() { void this.game.startGame(); }
+  protected startGame() {
+    if (!this.actionPending()) {
+      this.actionPending.set('start');
+      void this.game.startGame().then(() => this.actionPending.set(null), () => this.actionPending.set(null));
+    }
+  }
 
   protected winDots(wins: number): number[] {
     return new Array(Math.min(wins, 12));

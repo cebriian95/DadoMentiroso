@@ -29,7 +29,7 @@ public sealed class GameEngine
 
     // ---- Construcción de DTOs y broadcasts ----
 
-    public static RoomDto BuildRoomDto(Room room)
+    public static RoomDto BuildRoomDto(Room room, string? viewerId = null)
     {
         var players = room.Players.Select(p => new PlayerDto(
             p.Id, p.Name, p.IsSpectator ? 0 : p.Dice.Count,
@@ -48,11 +48,12 @@ public sealed class GameEngine
             var roundBets = room.RoundBets.Select(b => new BetDto(b.PlayerId,
                 room.Players.FirstOrDefault(p => p.Id == b.PlayerId)?.Name ?? "?", b.Quantity, b.Value)).ToList();
             game = new GameDto(phase.ToString(), bet, turn, room.RoundNumber, totalDice,
-                room.PhaseEndsAt, room.TurnEndsAt, room.TurnOrder.ToList(), roundBets);
+                room.PhaseEndsAt, room.TurnEndsAt, room.TurnOrder.ToList(), roundBets,
+                room.CurrentReveal, viewerId is not null && room.RolledPlayers.Contains(viewerId));
         }
 
         return new RoomDto(room.Id, room.Name, room.Password is not null, room.HostId,
-            room.DicePerPlayer, room.Status.ToString(), players, game);
+            room.DicePerPlayer, room.Status.ToString(), players, game, room.LastWinner);
     }
 
     /// <summary>Adquiere el lock y emite el estado de la sala.</summary>
@@ -64,7 +65,12 @@ public sealed class GameEngine
     /// <summary>Debe llamarse con room.Lock adquirido.</summary>
     public void BroadcastRoomLocked(Room room)
     {
-        _ = SendLogged(() => _hub.Clients.Group(room.Id).SendAsync("RoomState", BuildRoomDto(room)), "RoomState");
+        foreach (var player in room.Players.Where(p => p.ConnectionId is not null))
+        {
+            var connectionId = player.ConnectionId!;
+            var dto = BuildRoomDto(room, player.Id);
+            _ = SendLogged(() => _hub.Clients.Client(connectionId).SendAsync("RoomState", dto), "RoomState");
+        }
         // La notificación toma locks de varias salas; diferirla evita invertir
         // el orden de locks mientras la sala actual sigue bloqueada.
         _ = Task.Run(NotifyPublicRoomsChanged);
@@ -134,6 +140,7 @@ public sealed class GameEngine
             }
 
             room.Status = RoomStatus.InGame;
+            room.LastWinner = null;
             room.RoundNumber = 0;
             foreach (var p in room.Players)
             {
@@ -157,6 +164,7 @@ public sealed class GameEngine
         room.RoundNumber++;
         room.Phase = GamePhase.Rolling;
         room.CurrentBet = null;
+        room.CurrentReveal = null;
         room.RoundBets.Clear();
         room.TurnEndsAt = null;
         room.PhaseEndsAt = DateTimeOffset.UtcNow + RollingDuration;
@@ -229,10 +237,12 @@ public sealed class GameEngine
         BroadcastRoomLocked(room);
     }
 
-    private void ArmTurnTimerLocked(Room room)
+    private void ArmTurnTimerLocked(Room room, TimeSpan? duration = null)
     {
-        room.TurnEndsAt = DateTimeOffset.UtcNow + TurnDuration;
-        Schedule(room, TurnDuration, () => AutoPlayTurn(room));
+        var actualDuration = duration ?? TurnDuration;
+        room.PausedTurnRemaining = null;
+        room.TurnEndsAt = DateTimeOffset.UtcNow + actualDuration;
+        Schedule(room, actualDuration, () => AutoPlayTurn(room));
     }
 
     /// <summary>Sin acción en 3 min: apuesta mínima válida (o Mentira si no hay subida posible).</summary>
@@ -358,6 +368,7 @@ public sealed class GameEngine
         _rooms.Touch(room);
         room.PhaseEndsAt = DateTimeOffset.UtcNow + RevealDuration;
         room.TurnEndsAt = null;
+        room.PausedTurnRemaining = null;
 
         // Proyectamos la pérdida para decidir el ganador sin mutar todavía los dados.
         var projectedActive = room.Players
@@ -382,6 +393,7 @@ public sealed class GameEngine
                 .Select(p => new RevealPlayerDto(p.Id, p.Name, p.Dice.ToArray())).ToList(),
             winner?.Id,
             winner?.Name);
+        room.CurrentReveal = revealDto;
 
         _ = SendLogged(() => _hub.Clients.Group(room.Id).SendAsync("RevealAll", revealDto), "RevealAll");
         BroadcastRoomLocked(room);
@@ -414,6 +426,7 @@ public sealed class GameEngine
                 room.Status = RoomStatus.Lobby;
                 room.Phase = null;
                 room.CurrentBet = null;
+                room.CurrentReveal = null;
                 room.RoundBets.Clear();
                 room.PhaseEndsAt = null;
                 room.TurnEndsAt = null;
@@ -436,10 +449,12 @@ public sealed class GameEngine
         room.Status = RoomStatus.Lobby;
         room.Phase = null;
         room.CurrentBet = null;
+        room.CurrentReveal = null;
         room.RoundBets.Clear();
         room.PhaseEndsAt = null;
         room.TurnEndsAt = null;
         room.TurnOrder = [];
+        room.LastWinner = new GameResultDto(winner.Id, winner.Name);
         _ = SendLogged(() => _hub.Clients.Group(room.Id).SendAsync("GameOver", winner.Id, winner.Name), "GameOver");
         BroadcastRoomLocked(room);
     }
@@ -493,6 +508,14 @@ public sealed class GameEngine
                 EndGameLocked(room, active[0]);
                 return player;
             }
+
+            if (room.Phase == GamePhase.Rolling)
+            {
+                var connectedActive = room.TurnOrder.Count(id =>
+                    room.Players.FirstOrDefault(p => p.Id == id)?.IsDisconnected == false);
+                if (connectedActive > 0 && room.RolledPlayers.Count >= connectedActive)
+                    BeginBetting(room);
+            }
         }
 
         BroadcastRoomLocked(room);
@@ -543,9 +566,12 @@ public sealed class GameEngine
             else if (room.Phase == GamePhase.Betting && room.TurnOrder.Count > 0 &&
                      room.TurnOrder[room.CurrentTurnIndex % room.TurnOrder.Count] == player.Id)
             {
-                room.CurrentTurnIndex = (room.CurrentTurnIndex + 1) % room.TurnOrder.Count;
+                room.PausedTurnRemaining = room.TurnEndsAt is { } ends
+                    ? ends - DateTimeOffset.UtcNow
+                    : TurnDuration;
+                if (room.PausedTurnRemaining < TimeSpan.Zero) room.PausedTurnRemaining = TimeSpan.Zero;
+                room.TurnEndsAt = null;
                 room.PhaseToken++;
-                ArmTurnTimerLocked(room);
             }
             _rooms.Touch(room);
             BroadcastRoomLocked(room);
@@ -563,5 +589,16 @@ public sealed class GameEngine
                 RemovePlayerLocked(room, playerId);
             }
         });
+    }
+
+    public void HandleReconnectedLocked(Room room, Player player)
+    {
+        if (room.Status == RoomStatus.InGame && room.Phase == GamePhase.Betting &&
+            room.TurnOrder.Count > 0 && room.TurnOrder[room.CurrentTurnIndex % room.TurnOrder.Count] == player.Id &&
+            room.PausedTurnRemaining is { } remaining)
+        {
+            room.PhaseToken++;
+            ArmTurnTimerLocked(room, remaining);
+        }
     }
 }

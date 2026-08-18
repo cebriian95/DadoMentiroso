@@ -6,6 +6,7 @@ import { GameService } from '../../services/game.service';
 import { UserService } from '../../services/user.service';
 
 type Tab = 'create' | 'join' | 'public';
+const ROOM_CODE_PATTERN = /^[A-HJKMNPQRSTUVWXYZ23456789]{5}$/;
 
 /** Pantalla de entrada: nombre de usuario + crear sala / unirse / salas públicas. */
 @Component({
@@ -37,7 +38,7 @@ export class HomeComponent implements OnInit, OnDestroy {
   protected readonly usernameOk = computed(() => this.user.username().trim().length >= 1);
   protected readonly passwordOk = computed(() => !this.isPrivate() || (this.password().length >= 3 && this.password().length <= 20));
   protected readonly createOk = computed(() => this.usernameOk() && this.roomName().trim().length >= 1 && this.passwordOk() && !this.busy() && !this.game.reconnecting());
-  protected readonly joinOk = computed(() => this.usernameOk() && this.joinCode().trim().length >= 4 && !this.busy() && !this.game.reconnecting());
+  protected readonly joinOk = computed(() => ROOM_CODE_PATTERN.test(this.joinCode().trim()) && this.usernameOk() && !this.busy() && !this.game.reconnecting());
 
   ngOnInit() {
     const ended = this.game.sessionEnded();
@@ -90,7 +91,7 @@ export class HomeComponent implements OnInit, OnDestroy {
   }
 
   protected async joinPublic(code: string) {
-    if (!this.usernameOk() || this.busy()) return;
+    if (!this.usernameOk() || this.busy() || this.game.reconnecting()) return;
     await this.doJoin(code, null);
   }
 

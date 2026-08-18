@@ -10,6 +10,7 @@ public sealed class GameHub : Hub
     private const string WatchersGroup = "public-watchers";
     private const int MinPasswordLength = 3;
     private const int MaxPasswordLength = 20;
+    private const string RoomCodePattern = "^[A-HJKMNPQRSTUVWXYZ23456789]{5}$";
 
     private readonly RoomManager _rooms;
     private readonly GameEngine _engine;
@@ -48,7 +49,7 @@ public sealed class GameHub : Hub
         RoomDto dto;
         lock (room.Lock)
         {
-            dto = GameEngine.BuildRoomDto(room);
+            dto = GameEngine.BuildRoomDto(room, player.Id);
             _engine.BroadcastRoomLocked(room);
         }
         return new RoomJoinResponse(dto, player.ReconnectToken);
@@ -58,9 +59,11 @@ public sealed class GameHub : Hub
     {
         var playerName = (req.PlayerName ?? "").Trim();
         if (playerName.Length is < 1 or > 16) throw new HubException("Nombre de usuario inválido (1-16 caracteres)");
-        if (string.IsNullOrWhiteSpace(req.RoomCode)) throw new HubException("Falta el código de sala");
+        var roomCode = (req.RoomCode ?? "").Trim().ToUpperInvariant();
+        if (!System.Text.RegularExpressions.Regex.IsMatch(roomCode, RoomCodePattern))
+            throw new HubException("Código de sala inválido");
         ValidatePlayerId(req.PlayerId);
-        if (!_rooms.TryGetRoom(req.RoomCode.Trim(), out var room)) throw new HubException("La sala no existe");
+        if (!_rooms.TryGetRoom(roomCode, out var room)) throw new HubException("La sala no existe");
 
         int[]? myDice = null;
         RoomDto dto;
@@ -79,6 +82,7 @@ public sealed class GameHub : Hub
                 existing.ConnectionId = Context.ConnectionId;
                 existing.IsDisconnected = false;
                 existing.DisconnectedAt = null;
+                _engine.HandleReconnectedLocked(room, existing);
                 if (room.Status == RoomStatus.InGame && !existing.IsSpectator)
                     myDice = existing.Dice.ToArray();
             }
@@ -106,7 +110,7 @@ public sealed class GameHub : Hub
             }
 
             _rooms.Touch(room);
-            dto = GameEngine.BuildRoomDto(room);
+            dto = GameEngine.BuildRoomDto(room, req.PlayerId);
         }
 
         // Primero unir al grupo y luego emitir, para que el que entra también reciba el RoomState.

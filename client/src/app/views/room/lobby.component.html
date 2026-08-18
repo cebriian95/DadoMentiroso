@@ -63,7 +63,7 @@
               @if (isHost() && !p.isHost) {
                 <button (click)="kickTarget.set({ id: p.id, name: p.name })"
                         class="flex h-6 w-6 items-center justify-center rounded-full bg-danger-a15 text-xs font-bold text-danger transition active:bg-danger/30"
-                        [attr.aria-label]="'Expulsar a ' + p.name">✕</button>
+                         [attr.aria-label]="'Expulsar a ' + p.name" [disabled]="!!actionPending()">✕</button>
               }
             </div>
           }
@@ -75,10 +75,10 @@
         <span class="text-sm font-semibold text-secondary">Dados por jugador</span>
         @if (isHost()) {
           <div class="flex items-center gap-3">
-            <button (click)="setDice(-1)" [disabled]="room.dicePerPlayer <= 1"
+             <button (click)="setDice(-1)" [disabled]="room.dicePerPlayer <= 1 || !!actionPending()"
                     class="flex h-9 w-9 items-center justify-center rounded-full border-2 border-border-a15 bg-surface-a5 text-xl font-bold transition active:scale-90 disabled:opacity-30">−</button>
             <span class="w-8 text-center text-2xl font-black text-accent">{{ room.dicePerPlayer }}</span>
-            <button (click)="setDice(1)" [disabled]="room.dicePerPlayer >= 10"
+             <button (click)="setDice(1)" [disabled]="room.dicePerPlayer >= 10 || !!actionPending()"
                     class="flex h-9 w-9 items-center justify-center rounded-full border-2 border-border-a15 bg-surface-a5 text-xl font-bold transition active:scale-90 disabled:opacity-30">+</button>
           </div>
         } @else {
@@ -89,9 +89,9 @@
       <!-- Acciones -->
       <div class="flex flex-col gap-2">
         @if (isHost()) {
-          <button (click)="startGame()" [disabled]="room.players.length < 2"
+           <button (click)="startGame()" [disabled]="room.players.length < 2 || !!actionPending()"
                   class="w-full rounded-2xl bg-gradient-to-br from-accent-light to-accent-dark py-3.5 text-lg font-extrabold tracking-widest text-accent-text shadow-[var(--shadow-lg)] transition active:scale-95 disabled:opacity-40">
-            {{ room.players.length < 2 ? 'ESPERANDO JUGADORES…' : 'INICIAR PARTIDA' }}
+             {{ actionPending() === 'start' ? 'INICIANDO…' : room.players.length < 2 ? 'ESPERANDO JUGADORES…' : 'INICIAR PARTIDA' }}
           </button>
           <div class="grid grid-cols-2 gap-2">
             <button (click)="confirmLeave.set(true)"

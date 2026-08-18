@@ -8,7 +8,7 @@ import { DiceComponent } from '../../components/dice/dice.component';
 import { GameService } from '../../services/game.service';
 import { UserService } from '../../services/user.service';
 
-const ROLL_ANIMATION_MS = 500;
+const ROLL_ANIMATION_MS = 450;
 
 @Component({
   selector: 'app-game',
@@ -106,7 +106,6 @@ export class GameComponent {
   // ---- Revelado ----
   protected readonly reveal = this.game.reveal;
   protected readonly loserPlayers = this.game.loserPlayers;
-  protected readonly revealResolution = computed(() => this.reveal()?.resolution ?? null);
   protected readonly resolutionLabel = computed(() => {
     const r = this.reveal();
     if (!r) return '';
@@ -132,12 +131,6 @@ export class GameComponent {
     if (ids.length === 0) return null;
     return ids.map(id => this.room()?.players.find(p => p.id === id)?.name ?? '?').join(', ');
   });
-  protected readonly resolutionSubtext = computed(() => {
-    const r = this.reveal();
-    if (!r) return '';
-    return `Había ${r.actualCount} dados de valor ${r.bet.value}`;
-  });
-
   // ---- Chat ----
   protected readonly chatOpen = signal(false);
   protected readonly unread = this.game.unreadChat;
@@ -147,6 +140,7 @@ export class GameComponent {
   protected readonly kickTarget = signal<{ id: string; name: string } | null>(null);
   private pressTimer: ReturnType<typeof setTimeout> | null = null;
   private rollTimer: ReturnType<typeof setTimeout> | null = null;
+  protected readonly actionPending = signal<'bet' | 'doubt' | 'exact' | 'kick' | null>(null);
 
   constructor() {
     const timer = setInterval(() => this.now.set(Date.now()), 250);
@@ -162,8 +156,10 @@ export class GameComponent {
         this.lastRound = g.roundNumber;
         this.hasRolled.set(false);
         this.rollingNow.set(false);
+        this.betHistoryOpen.set(false);
       }
       if (g?.phase === 'Betting') this.hasRolled.set(true);
+      if (g?.hasRolledForPlayer !== undefined) this.hasRolled.set(g.hasRolledForPlayer);
       if (g?.phase === 'Revealing') {
         // Si un perdedor coincide con el jugador local, su dado ya se actualizó con el reveal
       }
@@ -193,16 +189,34 @@ export class GameComponent {
       this.hasRolled.set(true);
       this.rollTimer = null;
     }, ROLL_ANIMATION_MS);
-    void this.game.markRolled();
+    void this.game.markRolled().catch(() => {
+      if (this.rollTimer) clearTimeout(this.rollTimer);
+      this.rollTimer = null;
+      this.rollingNow.set(false);
+      this.hasRolled.set(false);
+    });
   }
 
   protected placeBet() {
     if (!this.betValid()) return;
-    void this.game.placeBet(this.betQty(), this.betValue());
+    if (this.actionPending()) return;
+    this.actionPending.set('bet');
+    void this.game.placeBet(this.betQty(), this.betValue()).then(
+      () => this.actionPending.set(null), () => this.actionPending.set(null));
   }
 
-  protected doubt() { void this.game.doubt(); }
-  protected exact() { void this.game.exact(); }
+  protected doubt() {
+    if (!this.actionPending()) {
+      this.actionPending.set('doubt');
+      void this.game.doubt().then(() => this.actionPending.set(null), () => this.actionPending.set(null));
+    }
+  }
+  protected exact() {
+    if (!this.actionPending()) {
+      this.actionPending.set('exact');
+      void this.game.exact().then(() => this.actionPending.set(null), () => this.actionPending.set(null));
+    }
+  }
 
   protected toggleChat() {
     const opening = !this.chatOpen();
@@ -212,10 +226,6 @@ export class GameComponent {
 
   protected toggleRoomCode() {
     this.roomCodeOpen.update(open => !open);
-  }
-
-  protected getPlayerNameColor(playerId: string): string {
-    return this.game.getPlayerColor(playerId);
   }
 
   protected startPlayerPress(playerId: string, playerName: string) {
@@ -237,7 +247,10 @@ export class GameComponent {
   protected confirmKick() {
     const target = this.kickTarget();
     this.kickTarget.set(null);
-    if (target) void this.game.kickPlayer(target.id);
+    if (target && !this.actionPending()) {
+      this.actionPending.set('kick');
+      void this.game.kickPlayer(target.id).then(() => this.actionPending.set(null), () => this.actionPending.set(null));
+    }
   }
 
   protected sortMyDice() {

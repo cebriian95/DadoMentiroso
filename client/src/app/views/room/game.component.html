@@ -34,8 +34,9 @@
                <p class="truncate text-xs font-bold" [style.color]="game.getPlayerColor(p.id)">{{ p.name }}</p>
                @if (p.id === user.playerId) { <span class="text-[9px] uppercase text-accent">(tú)</span> }
                <p class="text-[10px] text-secondary">{{ p.diceCount }} dados</p>
-            </div>
-          </div>
+             </div>
+             @if (p.isDisconnected) { <span class="text-[9px] uppercase text-muted">sin conexión</span> }
+           </div>
         }
       </div>
       @if (spectators().length > 0) {
@@ -86,8 +87,12 @@
                (pointerdown)="startPlayerPress(p.id, p.name)"
                (pointerup)="cancelPlayerPress()"
                (pointerleave)="cancelPlayerPress()"
-               (pointercancel)="cancelPlayerPress()"
-               (contextmenu)="$event.preventDefault()"
+                (pointercancel)="cancelPlayerPress()"
+                (keydown.enter)="$event.preventDefault(); isHost() && p.id !== user.playerId ? kickTarget.set({ id: p.id, name: p.name }) : null"
+                (keydown.space)="$event.preventDefault(); isHost() && p.id !== user.playerId ? kickTarget.set({ id: p.id, name: p.name }) : null"
+                [attr.role]="isHost() && p.id !== user.playerId ? 'button' : null"
+                [attr.tabindex]="isHost() && p.id !== user.playerId ? 0 : null"
+                (contextmenu)="$event.preventDefault()"
                [class.border-accent/60]="gameState()?.currentTurnPlayerId === p.id && phase() === 'Betting'"
                [class.bg-accent/5]="gameState()?.currentTurnPlayerId === p.id && phase() === 'Betting'"
                [class.turn-ring]="gameState()?.currentTurnPlayerId === p.id && phase() === 'Betting'"
@@ -189,7 +194,7 @@
         } @else if (amSpectator()) {
           <div class="rounded-2xl border border-border-a10 bg-panel px-6 py-4 text-center">
              <p class="text-lg font-black uppercase tracking-widest text-secondary">{{ amPending() ? 'Entrarás en la próxima ronda' : 'Te has quedado sin dados' }}</p>
-             <p class="mt-1 text-sm text-secondary">{{ amPending() ? 'El host te ha incorporado a la sala.' : 'Eres espectador. Puedes seguir el chat de la partida.' }}</p>
+             <p class="mt-1 text-sm text-secondary">{{ amPending() ? 'Estás pendiente para la próxima ronda.' : 'Eres espectador. Puedes seguir el chat de la partida.' }}</p>
           </div>
         } @else {
           <span class="text-xs uppercase tracking-[1px] text-secondary">Tus dados ({{ myPlayer()?.diceCount ?? 0 }})</span>
@@ -243,16 +248,20 @@
                   <div class="flex items-end justify-center gap-4">
                     <app-bet-wheel label="Nº de dados" [options]="qtyOptions()" [(value)]="betQty" [disabledOptions]="qtyDisabled()" [width]="104" />
                     <app-bet-wheel label="Valor" [options]="valueOptions" [(value)]="betValue" [disabledOptions]="valueDisabled()" [asDice]="true" [width]="72" />
-          </div>
+                  </div>
+                } @else {
+                  <p class="rounded-xl border border-border-a10 bg-surface-a5 px-3 py-2 text-center text-xs text-secondary">
+                    No hay una subida posible. Debes decir ¡Mentira! o ¡Exacto!
+                  </p>
+                }
                 <div class="grid w-full max-w-[420px] gap-2" [class.grid-cols-3]="!noRaisePossible()" [class.grid-cols-2]="noRaisePossible()">
                   @if (!noRaisePossible()) {
-                    <button (click)="placeBet()" [disabled]="!betValid()" class="rounded-2xl bg-gradient-to-br from-accent-light to-accent-dark py-3.5 text-base font-extrabold text-accent-text shadow-[var(--shadow-lg)] transition active:scale-95 disabled:opacity-40">Apostar</button>
+                   <button (click)="placeBet()" [disabled]="!betValid() || !!actionPending()" class="rounded-2xl bg-gradient-to-br from-accent-light to-accent-dark py-3.5 text-base font-extrabold text-accent-text shadow-[var(--shadow-lg)] transition active:scale-95 disabled:opacity-40">{{ actionPending() === 'bet' ? 'Enviando…' : 'Apostar' }}</button>
                   }
-                  <button (click)="doubt()" [disabled]="!currentBet()" class="rounded-2xl border border-danger/40 bg-danger-a15 py-3.5 text-base font-extrabold uppercase text-danger transition active:scale-95 disabled:opacity-30">¡Mentira!</button>
-                  <button (click)="exact()" [disabled]="!currentBet()" class="rounded-2xl border border-success-a40 bg-success-a15 py-3.5 text-base font-extrabold uppercase text-success transition active:scale-95 disabled:opacity-30">¡Exacto!</button>
+                   <button (click)="doubt()" [disabled]="!currentBet() || !!actionPending()" class="rounded-2xl border border-danger/40 bg-danger-a15 py-3.5 text-base font-extrabold uppercase text-danger transition active:scale-95 disabled:opacity-30">{{ actionPending() === 'doubt' ? 'Enviando…' : '¡Mentira!' }}</button>
+                   <button (click)="exact()" [disabled]="!currentBet() || !!actionPending()" class="rounded-2xl border border-success-a40 bg-success-a15 py-3.5 text-base font-extrabold uppercase text-success transition active:scale-95 disabled:opacity-30">{{ actionPending() === 'exact' ? 'Enviando…' : '¡Exacto!' }}</button>
                 </div>
               }
-            }
             </div>
           }
         }
